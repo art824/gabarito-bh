@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}Gabarito — parâmetros urbanísticos de BH{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='2' width='28' height='28' fill='%23F2EDE0' stroke='%2314202C' stroke-width='2.5'/%3E%3Ctext x='15' y='24' font-family='Georgia,serif' font-size='21' font-weight='bold' text-anchor='middle' fill='%2314202C'%3EG%3C/text%3E%3Ccircle cx='25' cy='8' r='3' fill='%23B0402C'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="{{ asset('style.css') }}">
+<script src="{{ asset('script.js') }}" defer></script>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <a class="wordmark" href="/">Gabarito<span class="bh">BH</span></a>
+    <div class="links">
+      <a href="/#a-ficha">A ficha</a>
+      <a href="/consulta" class="destaque">Consultar lote</a>
+    </div>
+  </div>
+</nav>
+
+{% block conteudo %}{% endblock %}
+
+<footer>
+  <div class="container">
+    <p class="aviso">
+      O Gabarito é uma ferramenta de apoio ao estudo preliminar. As informações
+      apresentadas <b>não substituem</b> a análise de um responsável técnico nem a
+      consulta oficial junto à Prefeitura de Belo Horizonte. O Plano Diretor
+      (Lei 11.181/19) está em processo de revisão — a base legal pode mudar.
+    </p>
+    <p class="legal">Gabarito · Lei 11.181/19 · Belo Horizonte, MG</p>
+  </div>
+</footer>
+
+</body>
+</html>

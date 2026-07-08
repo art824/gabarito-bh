@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block conteudo %}
+
+<header class="hero">
+  <div class="container">
+
+    <div>
+      <span class="marginalia mono">Ficha urbanística · <b>Lei 11.181/19</b> · Belo Horizonte</span>
+      <h1>Gabarito<span class="ponto">.</span></h1>
+      <p class="subtitulo">
+        Os parâmetros urbanísticos de qualquer lote de BH, em segundos.
+      </p>
+      <p class="apoio">
+        Zoneamento, ADEs, coeficientes de aproveitamento, afastamentos,
+        permeabilidade e as exceções que incidem no terreno — direto das camadas
+        oficiais da Prefeitura de BH, organizados como você desenharia.
+      </p>
+      <div class="hero-modos" id="hero-modos">
+        <button type="button" class="hm mono ativo" data-modo="endereco">Endereço</button>
+        <button type="button" class="hm mono" data-modo="indice">Índice cadastral</button>
+      </div>
+      <form class="busca-hero" method="post" action="/consulta">
+        <input type="hidden" name="modo" id="hero-modo" value="endereco">
+        <input type="text" name="endereco" id="busca-input" placeholder="Ex.: Rua Fernandes Tourinho, 200">
+        <input type="text" name="indice_cadastral" id="busca-indice" placeholder="Ex.: 863004A004 0034" hidden>
+        <button class="botao" type="submit">Consultar</button>
+      </form>
+      <p class="nota-lei mono">Base: Plano Diretor de BH + geodados BHMAP</p>
+    </div>
+
+    {% include "_mapa_bh.html" %}
+
+  </div>
+</header>
+
+<section class="faixa-escura" id="a-ficha">
+  <div class="container reveal">
+    <p class="rotulo-secao">A ficha</p>
+    <h2 class="titulo-secao">Tudo que você levantaria em horas na Prefeitura, numa consulta só.</h2>
+
+    <div class="fc" id="ficha-carrossel">
+      <div class="fc-foco">
+        <span class="fc-num mono" id="fc-num">01</span>
+        <h3 id="fc-titulo">Zoneamento</h3>
+        <p id="fc-texto">Em qual "zona" da cidade o lote está — é ela que define o quanto e o quê a lei permite construir ali.</p>
+      </div>
+      <div class="fc-itens" id="fc-itens" role="tablist" aria-label="Itens da ficha"></div>
+    </div>
+    <script type="application/json" id="dados-fc">[
+      {"t": "Zoneamento", "d": "Em qual \"zona\" da cidade o lote está — é ela que define o quanto e o quê a lei permite construir ali."},
+      {"t": "ADEs incidentes", "d": "Áreas com regras especiais (Pampulha, Santa Tereza, Av. do Contorno...) que mudam as regras gerais — inclusive quando várias se sobrepõem no mesmo lote."},
+      {"t": "Potencial construtivo", "d": "Quantos metros quadrados dá pra construir em relação ao tamanho do terreno (coeficiente de aproveitamento) e quantas unidades cabem (quota)."},
+      {"t": "Afastamentos", "d": "As distâncias mínimas que a construção precisa manter da rua e dos vizinhos — que mudam conforme a altura do prédio."},
+      {"t": "Permeabilidade e ocupação", "d": "Quanto do terreno precisa ficar livre pra água da chuva infiltrar, e quanto do chão pode ser coberto por construção."},
+      {"t": "Dados oficiais do lote", "d": "Área, testada, índice cadastral e infraestrutura da rua — direto do cadastro oficial da Prefeitura, sem você digitar nada."},
+      {"t": "Estudo interativo", "d": "Um desenho do seu lote em escala real: arrasta a altura pretendida e vê os afastamentos e a área construível mudarem na hora."},
+      {"t": "Transparência total", "d": "Toda exceção que prevalece aparece escrita, e tudo que o sistema ainda não verifica vira alerta explícito. Nada fica escondido."}
+    ]</script>
+
+    <div class="cta-meio">
+      <a class="botao botao-claro" href="/consulta">Consultar um lote agora →</a>
+    </div>
+  </div>
+</section>
+
+<section class="faixa" id="antes-depois">
+  <div class="container reveal">
+    <p class="rotulo-secao">Antes e depois</p>
+    <h2 class="titulo-secao">O caminho até os parâmetros de um lote...</h2>
+    <div class="versus">
+      <div class="versus-lado">
+        <span class="versus-titulo">Hoje · sem o Gabarito</span>
+        <ol class="versus-lista">
+          <li><b>SIURBE / Ibed</b><span>exige índice cadastral + CPF + cadastro</span></li>
+          <li><b>Consulta ao GeoSiurbe</b><span>os parâmetros urbanísticos ficam num serviço à parte</span></li>
+          <li><b>Plantas CP online</b><span>porque o croqui do Ibed não é a planta aprovada</span></li>
+          <li><b>BHMAP</b><span>~200 camadas — saber qual ligar é com você</span></li>
+          <li><b>Anexo XII na mão</b><span>fórmulas condicionais + dezenas de exceções de ADE</span></li>
+        </ol>
+      </div>
+      <div class="versus-meio" aria-hidden="true">→</div>
+      <div class="versus-lado">
+        <span class="versus-titulo versus-titulo-terra">Com o Gabarito</span>
+        <div class="versus-uno">
+          <div class="versus-uno-miolo">
+            <b>1 busca.</b>
+            <p>Endereço ou índice cadastral → ficha completa, com as exceções aplicadas e o desenho do lote em escala.</p>
+          </div>
+          <span class="versus-selo mono">sem cadastro · sem CPF · na hora</span>
+        </div>
+      </div>
+    </div>
+    <div class="prova-cta">
+      <p class="versus-prova">O plantão on-line de regulação urbana da Prefeitura de BH abre <b>mais de 400 agendamentos por mês</b> — gente fazendo fila pra perguntar o que esta página responde em segundos.</p>
+      <a class="botao" href="/consulta">Pular a fila →</a>
+    </div>
+  </div>
+</section>
+
+<section class="faixa-escura" id="potencial">
+  <div class="container reveal">
+    <p class="rotulo-secao">Demonstração</p>
+    <h2 class="titulo-secao">O que o coeficiente de aproveitamento significa no seu terreno.</h2>
+    <div class="calc-grade">
+      <div class="calc-controles">
+        <label for="calc-area">Área do terreno <output id="calc-area-out">600 m²</output></label>
+        <input type="range" id="calc-area" min="360" max="2000" step="10" value="600">
+        <div class="calc-zonas" role="group" aria-label="Escolha o zoneamento">
+          <button type="button" class="zona ativo" data-bas="1.0" data-max="5.0">OP-3<span class="ca-mini">CAbas 1,0 · CAmáx 5,0</span></button>
+          <button type="button" class="zona" data-bas="1.0" data-max="3.5">OP-2<span class="ca-mini">CAbas 1,0 · CAmáx 3,5</span></button>
+          <button type="button" class="zona" data-bas="1.0" data-max="1.3">OM-2<span class="ca-mini">CAbas 1,0 · CAmáx 1,3</span></button>
+          <button type="button" class="zona" data-bas="0.8" data-max="1.0">PA-3<span class="ca-mini">CAbas 0,8 · CAmáx 1,0</span></button>
+        </div>
+        <div class="calc-saidas">
+          <div>
+            <span class="k">Potencial no CA básico</span>
+            <b id="out-bas">600</b> <span class="un">m²</span>
+          </div>
+          <div>
+            <span class="k">Potencial no CA máximo</span>
+            <b id="out-max">3.000</b> <span class="un">m²</span>
+          </div>
+        </div>
+        <p class="nota mono">Potencial = área × CA. Estimativa didática — a ficha real considera quota, TO, TP, alturas e exceções de ADE.</p>
+      </div>
+      <div class="calc-perfil">
+        <svg viewBox="0 0 400 320" xmlns="http://www.w3.org/2000/svg" aria-label="Perfil esquemático comparando CA básico e CA máximo">
+          <defs>
+            <pattern id="hachura-calc" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="9" stroke="#F2EDE0" stroke-width="1"/>
+            </pattern>
+            <pattern id="hachura-calc-terra" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="9" stroke="#E08D74" stroke-width="1"/>
+            </pattern>
+          </defs>
+          <!-- terreno -->
+          <line x1="20" y1="270" x2="380" y2="270" stroke="#F2EDE0" stroke-width="2.5"/>
+          <rect x="20" y="270" width="360" height="18" fill="url(#hachura-calc)" opacity=".35"/>
+          <!-- volume CA básico -->
+          <rect id="vol-bas" class="volume" x="70" y="222" width="100" height="48" fill="url(#hachura-calc)" stroke="#F2EDE0" stroke-width="2"/>
+          <text id="cota-bas" class="cota-topo" x="120" y="210" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="#F2EDE0">600 m²</text>
+          <text x="120" y="302" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" letter-spacing="1.5" fill="rgba(242,237,224,.55)">CA BÁSICO</text>
+          <!-- volume CA máximo -->
+          <rect id="vol-max" class="volume" x="230" y="30" width="100" height="240" fill="url(#hachura-calc-terra)" stroke="#E08D74" stroke-width="2"/>
+          <text id="cota-max" class="cota-topo" x="280" y="18" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="#E08D74">3.000 m²</text>
+          <text x="280" y="302" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9" letter-spacing="1.5" fill="#E08D74">CA MÁXIMO</text>
+        </svg>
+        <div class="legenda mono">
+          <span>Perfil esquemático</span>
+          <span id="calc-zona-nome">OP-3</span>
+          <span>Anexo XII, t.10</span>
+        </div>
+      </div>
+    </div>
+    <div class="cta-meio">
+      <a class="botao botao-claro" href="/consulta">Ver o potencial do seu lote de verdade →</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

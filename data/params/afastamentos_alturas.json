@@ -1,0 +1,94 @@
+{
+  "_meta": {
+    "fonte": "Lei 11.181/2019, Anexo XII, tabelas 3 (AF), 4 (afastamentos laterais/fundos), 5 (AMD), 11 (TO/TP), 12 (altimetria)",
+    "status_revisao": "PENDENTE — conferir linha a linha contra o documento oficial"
+  },
+  "afastamento_frontal": {
+    "regra_geral_por_via": {
+      "LIGACAO REGIONAL": 4.0,
+      "ARTERIAL": 4.0,
+      "COLETORA": 3.0,
+      "LOCAL": 3.0,
+      "MISTA": "sem exigência",
+      "VIA DE PEDESTRES": "sem exigência"
+    },
+    "notas_gerais": [
+      "Zeis: AF dispensado para edificações até 13,0 m de altura (t.3.1 nota 1)",
+      "Aeis: aplica-se critério das Zeis enquanto não houver PRU (t.3.1 nota 2)",
+      "Via arterial/ligação regional: AF tratado como prolongamento do passeio, sem elementos construtivos (t.3.1 nota 3)"
+    ],
+    "excecoes_ade": {
+      "ADE Cidade Jardim": {"esquina": 5.0, "demais": 10.0},
+      "ADE Pampulha": 5.0,
+      "ADE Trevo": 5.0,
+      "ADE Barragem Santa Lucia": {"condicao": "edificações >15m de altura OU terreno >=1.000m2", "valor": 5.0},
+      "ADE Venda Nova": {"condicao": "lotes lindeiros à Rua Padre Pedro Pinto, edificação horizontal", "valor": "dispensado"}
+    }
+  },
+  "afastamentos_laterais_fundos": {
+    "regra_geral": [
+      {"condicao": "H < 8,0 m", "valor_m": 1.5},
+      {"condicao": "8,0 <= H <= 12,0 m", "valor_m": 2.3},
+      {"condicao": "H > 12,0 m", "formula": "2,3 + (H - 12,0) / B"}
+    ],
+    "fator_B": {"CR|AGEE|AGEUC|OP-3": 8, "centralidade_local": 6, "demais": 4},
+    "fator_B_confirmacao": "Conferido contra o .doc oficial do Anexo XII em 07/2026 (notas da t.4). ATENÇÃO: camada de centralidades (B=6) não obtida — usar B=4 (conservador, afastamento maior) fora de CR/AGEE/AGEUC/OP-3.",
+    "flex_terreno_estreito": "Terrenos com frente <12m (exceto ADE Santa Tereza): admitido 1,5m p/ H<=12m se TO<=50% (t.4 nota 7c)",
+    "excecoes": {
+      "Setor Hipercentro da ADE Avenida do Contorno": {"laterais": "dispensado sem aberturas; com abertura aplica-se diâmetro de iluminação do Código de Edificações", "fundos": "diâmetro de iluminação, mínimo 5,0 m", "requer_setor": true},
+      "ADE Barragem Santa Lucia": {"condicao": "edif >15m ou terreno >=1.000m2", "laterais": 3.0},
+      "ADE Pampulha": {"testada<12": {"lat": 1.5, "fundos": 3.0}, "testada 12-15": {"lat": 2.3, "fundos": 3.0}, "testada>=15": {"lat": 3.0, "fundos": 3.0}},
+      "ADE Cidade Jardim": {"testada<12": {"lat": 1.5, "fundos": 3.0}, "testada 12-15": {"lat": 2.3, "fundos": 3.0}, "testada>=15": {"lat": 3.0, "fundos": 3.0}},
+      "ZEIS": {"ate_13m": 0.9, "acima_13m": "regra geral até decreto do PGE"}
+    }
+  },
+  "altura_maxima_divisa": {
+    "regra_geral": [
+      {"via": "LOCAL|COLETORA", "amd_m": 5.0},
+      {"via": "ARTERIAL|LIGACAO REGIONAL", "largura<=15m": 5.0, "largura>15m": 10.8}
+    ],
+    "mapeamento_largura_shapefile": "TIPO_LARGU C = 'LARGURA DA VIA >= 15m' — ATENÇÃO: lei diz '>15m', shapefile agrupa '>=15m'; conferir tratamento do caso exatamente 15m",
+    "excecoes": {
+      "Setor Hipercentro da ADE Avenida do Contorno": {"laterais": "sem limite sem aberturas", "fundos": 10.8, "requer_setor": true},
+      "ADE Regiao da Lagoinha": {"amd": 5.0, "nota": "e Setor Floresta e Setor ADE Residencial Central da ADE Av. do Contorno"},
+      "ADE Pampulha": "vedada edificação sobre divisas, exceto equipamentos de cultura/turismo/esporte/lazer (AMD 9,0 arterial; 5,0 coletora)",
+      "ADE Cidade Jardim": "vedada edificação sobre divisas",
+      "ADE Trevo": "vedada edificação sobre divisas",
+      "ADE Santa Tereza": "vedada, exceto encosto em edificação vizinha já construída na divisa, limitado à altura desta",
+      "ZEIS": {"ate_13m": 13.0, "acima": "regra geral até decreto do PGE"}
+    }
+  },
+  "taxa_ocupacao_permeabilidade": {
+    "ATENCAO": "TP/TO dependem das porções territoriais do ANEXO II (estrutura ambiental) — camada geográfica AINDA NÃO OBTIDA. Sem ela este bloco não pode ser aplicado a um endereço.",
+    "faixas_anexo_ii": [
+      {"tp_min": "95%", "to_max": "3%", "obs": "flexibilizável p/ TP 70% / TO 25% com anuência do Comam em casos listados"},
+      {"tp_min": "70%", "to_max": "25%"},
+      {"tp_min": "30%", "to_max": "60%"},
+      {"tp_min": "20%", "to_max": "80%", "obs": "terrenos <=360m2: admitido TP 10% / TO 80%"}
+    ],
+    "excecoes": {
+      "ADE Cidade Jardim": "TO = 40% (t.11 nota 5)",
+      "conexao_fundo_vale": "TP 70% / TO 25% até PEA (t.11 nota 6)",
+      "PA e ADEs ambientais": "TO aplicável a todos os níveis inclusive subsolo em PA-1/2/3, conexão de fundo de vale, ADE Interesse Ambiental, ADE Bacia da Pampulha, ADE Pampulha, ADE Cidade Jardim (t.11 nota 1)",
+      "ADE Barragem Santa Lucia": "caixa de captação obrigatória além da TP (t.11 nota 7)"
+    }
+  },
+  "limite_altimetria": {
+    "aplicacao": "só existe em ADEs específicas; fora delas não há limite de altimetria por esta tabela",
+    "por_ade": {
+      "ADE Cidade Jardim": {"max_m": 9.0},
+      "ADE Trevo": {"max_m": 9.0, "obs": "em Aeis-1/Aeis Int. Ambiental/Aeis-2/Ageuc: 12,0 m"},
+      "ADE Pampulha": {"max_m": 9.0, "obs": "redação Lei 11.792/2024; lindeiros à Av. Otacílio Negrão de Lima: soma dos pés-direitos <=9m; sem subsolo enterrado >3m; caixa de escada/casa de máquinas/caixa d'água não computadas"},
+      "ADE Belvedere": "apenas edificação horizontal",
+      "ADE Estoril": "apenas edificação horizontal",
+      "ADE Mangabeiras": "apenas edificação horizontal",
+      "ADE Santa Lucia": {"regra": "apenas edificação horizontal", "obs": "não se aplica a terrenos com frente p/ Av. Raja Gabaglia"},
+      "ADE Sao Bento": {"regra": "apenas edificação horizontal", "obs": "não se aplica a terrenos com frente p/ Av. Raja Gabaglia"},
+      "ADE Regiao da Lagoinha": {"requer_setor": true, "setores": {"1": 7.5, "2": "7,5 até 20m de profundidade; 15,0 no restante", "3": "7,5/21,0 conforme via; demais 21,0", "4": "7,5 em trechos específicos; demais sem limite", "5": "limitado ao nível da Rua Diamantina (CDPCM-BH)"}},
+      "ADE Santa Tereza": {"requer_setor": true, "setores": {"1": "9,0 lindeiro a tombados; 9,0/15,0 conforme vias listadas; demais 15,0"}},
+      "ADE Venda Nova": {"requer_setor": true, "setores": {"1": "8,0 (sem limite lindeiro às Av. Vilarinho e Dom Pedro I)", "2": 11.0, "3": 20.0, "4": 26.0}},
+      "ADE Primeiro de Maio": {"max_m": 7.0},
+      "ADE Mirantes": {"requer_setor": true, "regra": "setor 2 limitado por cotas altimétricas absolutas por região (Baleia 1060, Belvedere 1140, etc.); setor 1 sem limite — REQUER dado de cota do terreno (levantamento Prodabel)"}
+    }
+  }
+}

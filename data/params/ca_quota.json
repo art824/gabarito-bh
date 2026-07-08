@@ -1,0 +1,198 @@
+{
+  "_meta": {
+    "fonte": "Lei 11.181/2019, Anexo XII, tabela 10 — Coeficiente de aproveitamento e quota de terreno por unidade habitacional",
+    "extraido_de": "docs/anexo12.txt (convertido do .doc oficial enviado pelo usuário, versão consolidada até Lei 11.792/2024)",
+    "status_revisao": "Tabela 10 completa. Valores AGEE/AGEUC confirmados por dupla fonte (texto + print do doc oficial em 02/07/2026). Revisão final do Arthur ainda recomendada.",
+    "convencoes": {
+      "null": "'Não se aplica' no texto legal",
+      "sem_limite": "string 'sem_limite' quando a lei diz 'Sem limite'"
+    }
+  },
+  "regra_geral": {
+    "PA-1": {
+      "ca_min": null,
+      "ca_bas": "0,05 privado / 0,3 condicionado (ver obs.)",
+      "ca_max": 0.3,
+      "ca_cent": 0.3,
+      "qt_m2_un": 2500,
+      "qt_cent_m2_un": 2500,
+      "obs": "CAbas 0,3 válido apenas para terrenos privados; superação do CAbas em terrenos públicos condicionada à anuência do órgão ambiental (Anexo XII, t.10, obs. 1-2)"
+    },
+    "PA-2": {
+      "ca_min": null,
+      "ca_bas": 0.5,
+      "ca_max": 0.8,
+      "ca_cent": 0.8,
+      "qt_m2_un": 1250,
+      "qt_cent_m2_un": 1250
+    },
+    "PA-3": {
+      "ca_min": null,
+      "ca_bas": 0.8,
+      "ca_max": 1.0,
+      "ca_cent": 1.0,
+      "qt_m2_un": 500,
+      "qt_cent_m2_un": 500
+    },
+    "OM-1": {
+      "ca_min": 0.2,
+      "ca_bas": 1.0,
+      "ca_max": 1.2,
+      "ca_cent": 1.5,
+      "qt_m2_un": 100,
+      "qt_cent_m2_un": 35
+    },
+    "OM-2": {
+      "ca_min": 0.2,
+      "ca_bas": 1.0,
+      "ca_max": 1.3,
+      "ca_cent": 1.6,
+      "qt_m2_un": 40,
+      "qt_cent_m2_un": 30
+    },
+    "OM-3": {
+      "ca_min": 0.3,
+      "ca_bas": 1.0,
+      "ca_max": 1.5,
+      "ca_cent": 2.0,
+      "qt_m2_un": 40,
+      "qt_cent_m2_un": 30
+    },
+    "OM-4": {
+      "ca_min": null,
+      "ca_bas": 1.0,
+      "ca_max": null,
+      "ca_cent": 1.2,
+      "qt_m2_un": "50 se area>220m2; 25 se area<=220m2",
+      "qt_cent_m2_un": 25
+    },
+    "OP-1": {
+      "ca_min": 0.3,
+      "ca_bas": 1.0,
+      "ca_max": 2.0,
+      "ca_cent": 2.4,
+      "qt_m2_un": 30,
+      "qt_cent_m2_un": 23
+    },
+    "OP-2": {
+      "ca_min": 0.3,
+      "ca_bas": 1.0,
+      "ca_max": 3.5,
+      "ca_cent": 3.6,
+      "qt_m2_un": 17,
+      "qt_cent_m2_un": 15
+    },
+    "OP-3": {
+      "ca_min": 0.5,
+      "ca_bas": 1.0,
+      "ca_max": 5.0,
+      "ca_cent": null,
+      "qt_m2_un": "sem_limite",
+      "qt_cent_m2_un": "sem_limite"
+    },
+    "CR": {
+      "ca_min": 0.5,
+      "ca_bas": 1.0,
+      "ca_max": null,
+      "ca_cent": 5.0,
+      "qt_m2_un": "sem_limite",
+      "qt_cent_m2_un": "sem_limite",
+      "obs": "Centralidade Regional: terrenos >750m2 condicionados a nº mínimo de UH = área/30 para uso residencial ou misto"
+    },
+    "AGEUC": {
+      "ca_min": 0.3,
+      "ca_bas": 1.0,
+      "ca_max": 4.0,
+      "ca_cent": 4.0,
+      "qt_m2_un": "sem_limite",
+      "qt_cent_m2_un": "sem_limite",
+      "obs": "Aplicação do CA deve obedecer ao art. 110"
+    },
+    "AGEE": {
+      "ca_min": 0.5,
+      "ca_bas": 1.0,
+      "ca_max": 4.0,
+      "ca_cent": 4.0,
+      "qt_m2_un": null,
+      "qt_cent_m2_un": null,
+      "obs": "Superação do CAbas admitida apenas p/ terrenos >720m2; aplicação do CA obedece ao art. 110"
+    },
+    "ZEIS-1": {
+      "ca_min": null,
+      "ca_bas": 1.0,
+      "ca_max": null,
+      "ca_cent": null,
+      "qt_m2_un": "sem_limite",
+      "qt_cent_m2_un": "sem_limite",
+      "obs": "PGE pode alterar todos os parâmetros, exceto CAmax/CAcent limitados a 2,8"
+    },
+    "ZEIS-2": {
+      "ca_min": null,
+      "ca_bas": 1.0,
+      "ca_max": null,
+      "ca_cent": null,
+      "qt_m2_un": "sem_limite",
+      "qt_cent_m2_un": "sem_limite",
+      "obs": "PGE pode alterar todos os parâmetros, exceto CAmax/CAcent limitados a 2,8"
+    },
+    "AEIS_1": {
+      "ca_min": 0.5,
+      "ca_bas": "1,7 (área bruta)",
+      "ca_max": "2,5 (área bruta)",
+      "ca_cent": "2,8 (área bruta)",
+      "qt_m2_un": "sem_limite",
+      "qt_cent_m2_un": "sem_limite",
+      "obs": "Superar CAmax até CAcent exige 10-15% da área construída em uso não residencial com fachada ativa"
+    },
+    "AEIS_2": {
+      "ca_min": null,
+      "ca_bas": 1.0,
+      "ca_max": null,
+      "ca_cent": null,
+      "qt_m2_un": 25,
+      "qt_cent_m2_un": 25,
+      "obs": "PRU pode alterar: CAmax/CAcent<=2,8; QT>=40 nas ADEs Sta Tereza/Venda Nova; QT>=60 nas ADEs Trevo/Buritis"
+    }
+  },
+  "excecoes_ade": {
+    "ADE Belvedere": {
+      "regra": "QT = área do terreno (apenas unifamiliar)"
+    },
+    "ADE Mangabeiras": {
+      "regra": "QT = área do terreno (apenas unifamiliar)"
+    },
+    "ADE Santa Lucia": {
+      "regra": "QT = área do terreno (apenas unifamiliar)"
+    },
+    "ADE Sao Bento": {
+      "regra": "Setor 1: QT = área do terreno (apenas unifamiliar). Demais setores: regra geral",
+      "requer_setor": true
+    },
+    "ADE Buritis": {
+      "regra": "Não se aplica CAmax. Setor Unifamiliar: QT = área do terreno",
+      "requer_setor": true
+    },
+    "ADE Estoril": {
+      "regra": "Não se aplica CAcent. CAmax em Ageuc só p/ edificação exclusivamente não residencial"
+    },
+    "ADE Bacia da Pampulha": {
+      "regra": "Setor 1: CAbas=0,3 (exceto centralidades/Ageuc/Aeis: 1,0). Setor 2: CAbas=0,6 (exceto centralidades/Ageuc/Agee/Aeis: 1,0). Setores 1 e 2: não se aplica CAcent nem CAmax",
+      "requer_setor": true
+    },
+    "ADE Pampulha": {
+      "regra": "Não se aplica CAcent. CAmax em Ageuc só p/ não residencial. Setor Lagoa da Pampulha: QT = área do terreno",
+      "requer_setor": true
+    },
+    "ADE Santa Tereza": {
+      "regra": "Não se aplica CAcent"
+    },
+    "ADE Cidade Jardim": {
+      "regra": "Não se aplica CAcent. QT = área do terreno (apenas unifamiliar). Exceção p/ lotes lindeiros a vias PECJ-III com hospital preexistente"
+    }
+  },
+  "excecoes_sobreposicoes": {
+    "conexao_fundo_vale": "CAbas restrito a 0,5; não se aplica CAmax/CAcent até PEA; não se aplica CAmin — REQUER CAMADA GEOGRÁFICA AINDA NÃO OBTIDA",
+    "OUC": "OUC 710, Corredor Antônio Carlos/Pedro I, Leste-Oeste e Vetor Norte têm restrições transitórias — REQUER CAMADA GEOGRÁFICA AINDA NÃO OBTIDA",
+    "PVP": "Projeto Viário Prioritário: área edificada limitada a 1.000m2, altura máx 8m, sem CAmax/CAcent — REQUER CAMADA GEOGRÁFICA (Anexo IV) AINDA NÃO OBTIDA"
+  }
+}
