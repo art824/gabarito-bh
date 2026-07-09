@@ -353,6 +353,11 @@
       /* ---------- modo real: servidor calcula o envelope geométrico ---------- */
       var ultimaAlturaOk = parseFloat(inH.value);
       var fetchTimer = null;
+      /* altura_maxima já veio calculada na carga inicial (varredura
+         sequencial, mais cara que os outros cálculos) — manda de volta
+         em toda chamada do slider pra o servidor NÃO recalcular isso a
+         cada arrastada, só reaproveitar o valor. */
+      var alturaMaximaConhecida = est.desenho_inicial.altura_maxima;
 
       atualizarNumerosEstaticos(est.desenho_inicial.area_total);
       renderizar(est.desenho_inicial, ultimaAlturaOk);
@@ -360,7 +365,7 @@
       function pedirAltura(H, aoReceber) {
         fetch("/consulta/estudo", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lat: est.lat, lon: est.lon, altura: H }),
+          body: JSON.stringify({ lat: est.lat, lon: est.lon, altura: H, altura_maxima: alturaMaximaConhecida }),
         }).then(function (r) { return r.json(); }).then(aoReceber).catch(function () {});
       }
 

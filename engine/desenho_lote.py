@@ -257,16 +257,27 @@ def afastamento_lateral_formula(altura, fator_b):
 
 def calcular_altura_maxima(poly_desenho, testadas, af_por_rua, af_exc, fator_b,
                             faixa_tp, to_m2_max, area_min_util=1.0,
-                            h_min=3.0, h_max=100.0):
+                            h_min=3.0, h_max=100.0, passo=0.5):
     """Maior altura (m) cuja projeção construível (mancha) ainda tem pelo
     menos `area_min_util` m² de área — vira o teto REAL do slider de altura
     no front (calculado pela geometria de CADA lote, não um valor fixo
-    igual pra todos). Busca binária: a área da mancha só encolhe conforme
-    a altura sobe (o afastamento lateral cresce com H, then o envelope e a
-    mancha só diminuem ou ficam vazios) — nunca volta a crescer, então a
-    busca binária é válida mesmo com os "buracos" onde o envelope vira
-    None (recuo grande demais pro algoritmo confiar; tratado como área 0,
-    que é o mesmo efeito prático de "não cabe mais nada")."""
+    igual pra todos).
+
+    NÃO é busca binária — foi busca binária antes, e tinha um bug real: o
+    algoritmo de recuo por aresta (_offset_por_aresta) pode, em lotes bem
+    côncavos/irregulares, ter um "solavanco" numérico em que a área da
+    mancha ZERA numa altura e depois volta a aparecer positiva numa altura
+    MAIOR (artefato do algoritmo, não um resultado geométrico de verdade).
+    Busca binária assume que a função só diminui — com esse solavanco ela
+    podia pular o primeiro zero de verdade e convergir num valor de altura
+    bem mais alto e errado (visto na prática: lote que devia travar a uns
+    40 e poucos metros deixava o slider ir até 82m).
+
+    Por isso aqui é uma VARREDURA SEQUENCIAL de baixo pra cima, de `passo`
+    em `passo` — para no PRIMEIRO ponto em que a área cai abaixo do
+    mínimo e IGNORA qualquer "recuperação" depois disso. Só refina com
+    busca binária dentro do último intervalinho (onde a monotonicidade
+    local é uma suposição segura)."""
     def _mancha_area(h):
         lateral = afastamento_lateral_formula(h, fator_b)
         envelope = calcular_envelope(poly_desenho, testadas, af_por_rua, af_exc, lateral)
@@ -277,17 +288,24 @@ def calcular_altura_maxima(poly_desenho, testadas, af_por_rua, af_exc, fator_b,
 
     if _mancha_area(h_min) < area_min_util:
         return h_min  # nem na altura mínima sobra área útil
-    if _mancha_area(h_max) >= area_min_util:
-        return h_max  # sobra área até no teto mais alto considerado
 
-    lo, hi = h_min, h_max
-    for _ in range(22):
-        mid = (lo + hi) / 2
-        if _mancha_area(mid) >= area_min_util:
-            lo = mid
-        else:
-            hi = mid
-    return round(lo, 1)
+    h_anterior = h_min
+    h = h_min + passo
+    while h <= h_max:
+        if _mancha_area(h) < area_min_util:
+            # achou o primeiro "zero" — refina só entre h_anterior (bom) e
+            # h (ruim), sem olhar mais nada acima disso
+            lo, hi = h_anterior, h
+            for _ in range(10):
+                mid = (lo + hi) / 2
+                if _mancha_area(mid) >= area_min_util:
+                    lo = mid
+                else:
+                    hi = mid
+            return round(lo, 1)
+        h_anterior = h
+        h += passo
+    return round(h_anterior, 1)  # nunca zerou até h_max
 
 
 def poligono_para_coords(poly):

@@ -333,7 +333,8 @@ def consulta_page():
     return render_template("consulta.html", **contexto)
 
 
-def _calcular_desenho(lat: float, lon: float, altura: float, res: dict | None = None) -> dict | None:
+def _calcular_desenho(lat: float, lon: float, altura: float, res: dict | None = None,
+                       altura_maxima_conhecida: float | None = None) -> dict | None:
     """Núcleo geométrico do anexo interativo — usado tanto no primeiro
     render (`/consulta`, altura padrão) quanto nas atualizações do slider
     (`/consulta/estudo`). Sempre relocaliza o lote (barato, local) em vez
@@ -370,11 +371,18 @@ def _calcular_desenho(lat: float, lon: float, altura: float, res: dict | None = 
 
     # altura máxima de VERDADE pra esse lote — o slider não pode ir além
     # do ponto em que a projeção construível já não tem área nenhuma
-    # (calculado por lote, não um teto fixo igual pra todos)
-    altura_maxima = calcular_altura_maxima(
-        poly_d, testadas, af_por_rua, estudo.get("af_exc"), estudo["fator_b"],
-        faixa_tp_base, to_m2_max,
-    )
+    # (calculado por lote, não um teto fixo igual pra todos). É uma
+    # varredura sequencial (ver desenho_lote.py), mais cara que uma busca
+    # binária — por isso só roda de fato na 1ª carga da página; as
+    # chamadas seguintes do slider já mandam o valor de volta e a gente
+    # só reaproveita, em vez de recalcular a cada arrastada.
+    if altura_maxima_conhecida is not None:
+        altura_maxima = altura_maxima_conhecida
+    else:
+        altura_maxima = calcular_altura_maxima(
+            poly_d, testadas, af_por_rua, estudo.get("af_exc"), estudo["fator_b"],
+            faixa_tp_base, to_m2_max,
+        )
     altura_usada = min(altura, altura_maxima)
 
     lateral_m = _afastamento_lateral(altura_usada, estudo["fator_b"])
@@ -420,7 +428,17 @@ def consulta_estudo():
     except (TypeError, ValueError):
         return jsonify({"erro": "parâmetros inválidos"}), 400
 
-    desenho = _calcular_desenho(lat, lon, altura)
+    # o front manda de volta a altura_maxima que já recebeu na carga
+    # inicial — evita recalcular a varredura sequencial (mais cara) a
+    # cada arrastada do slider, já que o valor não muda pro mesmo lote
+    altura_maxima_conhecida = None
+    try:
+        if dados.get("altura_maxima") is not None:
+            altura_maxima_conhecida = float(dados["altura_maxima"])
+    except (TypeError, ValueError):
+        pass
+
+    desenho = _calcular_desenho(lat, lon, altura, altura_maxima_conhecida=altura_maxima_conhecida)
     if desenho is None:
         return jsonify({"erro": "lote não identificado ou geometria complexa demais"}), 422
     return jsonify(desenho)
