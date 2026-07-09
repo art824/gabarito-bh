@@ -314,13 +314,19 @@
           <div class="controle-h">
             <div class="controle-h-topo">
               <label for="est-altura">Altura pretendida</label>
-              <output id="est-h-out">9,0 m</output>
+              <output id="est-h-out">{% if estudo.desenho_inicial %}{{ '%.1f'|format(estudo.desenho_inicial.altura_usada)|replace('.', ',') }}{% else %}9,0{% endif %} m</output>
             </div>
-            <input type="range" id="est-altura" min="3" max="50" step="0.5" value="9">
+            <input type="range" id="est-altura" min="3"
+                   max="{% if estudo.desenho_inicial %}{{ estudo.desenho_inicial.altura_maxima }}{% else %}50{% endif %}"
+                   step="0.5"
+                   value="{% if estudo.desenho_inicial %}{{ estudo.desenho_inicial.altura_usada }}{% else %}9{% endif %}">
             <div class="controle-h-base">
               <span class="mono" id="est-lat-calc"></span>
               <span class="mono" id="est-h-max"></span>
             </div>
+          </div>
+          <div class="afastamento-lateral-destaque">
+            Afastamento Lateral <b id="est-lat-destaque">—</b> <i class="mono">m</i>
           </div>
 
         </div>

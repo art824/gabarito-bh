@@ -21,7 +21,7 @@ from shapely.geometry import Point
 from consulta import carregar_camadas, consultar, localizar_lote, calcular_testadas, PARAMS, CRS_DADOS
 from desenho_lote import (
     orientar_para_desenho, calcular_envelope, calcular_faixa_permeavel,
-    calcular_mancha, poligono_para_coords,
+    calcular_mancha, calcular_altura_maxima, poligono_para_coords,
 )
 from geocode import endereco_para_latlon, GeocodeError
 from indice_cadastral import buscar_por_indice, IndiceCadastralError
@@ -358,26 +358,41 @@ def _calcular_desenho(lat: float, lon: float, altura: float, res: dict | None = 
     poly_d, _angulo = orientar_para_desenho(poly, testadas)
 
     af_por_rua = {t["rua"]: _resolver_af_regra_geral(t.get("classificacao")) for t in testadas}
-    lateral_m = _afastamento_lateral(altura, estudo["fator_b"])
+
+    # faixa de TP não depende da altura (só do contorno/testadas) — calcula
+    # uma vez só e reaproveita tanto na altura pedida quanto na busca da
+    # altura máxima abaixo
+    faixa_tp_base = None
+    if estudo.get("tp_pct") is not None:
+        area_min = poly_d.area * estudo["tp_pct"] / 100
+        faixa_tp_base = calcular_faixa_permeavel(poly_d, testadas, area_min)
+    to_m2_max = poly_d.area * estudo["to_pct"] / 100 if estudo.get("to_pct") is not None else None
+
+    # altura máxima de VERDADE pra esse lote — o slider não pode ir além
+    # do ponto em que a projeção construível já não tem área nenhuma
+    # (calculado por lote, não um teto fixo igual pra todos)
+    altura_maxima = calcular_altura_maxima(
+        poly_d, testadas, af_por_rua, estudo.get("af_exc"), estudo["fator_b"],
+        faixa_tp_base, to_m2_max,
+    )
+    altura_usada = min(altura, altura_maxima)
+
+    lateral_m = _afastamento_lateral(altura_usada, estudo["fator_b"])
 
     envelope = calcular_envelope(poly_d, testadas, af_por_rua, estudo.get("af_exc"), lateral_m)
     inconstruivel = envelope is None
 
-    faixa_tp = None
-    if not inconstruivel and estudo.get("tp_pct") is not None:
-        area_min = poly_d.area * estudo["tp_pct"] / 100
-        faixa_tp = calcular_faixa_permeavel(poly_d, testadas, area_min)
+    faixa_tp = faixa_tp_base if not inconstruivel else None
 
     mancha, limitante = (None, None)
-    to_m2_max = None
     if not inconstruivel:
-        if estudo.get("to_pct") is not None:
-            to_m2_max = poly_d.area * estudo["to_pct"] / 100
         mancha, limitante = calcular_mancha(envelope, faixa_tp, to_m2_max)
 
     return {
         "inconstruivel": inconstruivel,
         "lateral_m": round(lateral_m, 2),
+        "altura_maxima": altura_maxima,
+        "altura_usada": round(altura_usada, 1),
         "contorno": poligono_para_coords(poly_d),
         "testadas": [{"rua": t["rua"], "comprimento_m": t["comprimento_m"],
                        "classificacao": t.get("classificacao"),

@@ -244,6 +244,52 @@ def calcular_mancha(envelope, faixa_tp, to_m2_max):
     return melhor, "TO"
 
 
+def afastamento_lateral_formula(altura, fator_b):
+    """Mesma fórmula da t.4 usada em webapp/app.py — duplicada aqui (em vez
+    de importada) porque este módulo não depende do Flask; é só matemática
+    pura, sem risco de divergir (testado nos 2 lugares)."""
+    if altura < 8:
+        return 1.5
+    if altura <= 12:
+        return 2.3
+    return 2.3 + (altura - 12) / fator_b
+
+
+def calcular_altura_maxima(poly_desenho, testadas, af_por_rua, af_exc, fator_b,
+                            faixa_tp, to_m2_max, area_min_util=1.0,
+                            h_min=3.0, h_max=100.0):
+    """Maior altura (m) cuja projeção construível (mancha) ainda tem pelo
+    menos `area_min_util` m² de área — vira o teto REAL do slider de altura
+    no front (calculado pela geometria de CADA lote, não um valor fixo
+    igual pra todos). Busca binária: a área da mancha só encolhe conforme
+    a altura sobe (o afastamento lateral cresce com H, then o envelope e a
+    mancha só diminuem ou ficam vazios) — nunca volta a crescer, então a
+    busca binária é válida mesmo com os "buracos" onde o envelope vira
+    None (recuo grande demais pro algoritmo confiar; tratado como área 0,
+    que é o mesmo efeito prático de "não cabe mais nada")."""
+    def _mancha_area(h):
+        lateral = afastamento_lateral_formula(h, fator_b)
+        envelope = calcular_envelope(poly_desenho, testadas, af_por_rua, af_exc, lateral)
+        if envelope is None:
+            return 0.0
+        mancha, _ = calcular_mancha(envelope, faixa_tp, to_m2_max)
+        return mancha.area if mancha is not None else 0.0
+
+    if _mancha_area(h_min) < area_min_util:
+        return h_min  # nem na altura mínima sobra área útil
+    if _mancha_area(h_max) >= area_min_util:
+        return h_max  # sobra área até no teto mais alto considerado
+
+    lo, hi = h_min, h_max
+    for _ in range(22):
+        mid = (lo + hi) / 2
+        if _mancha_area(mid) >= area_min_util:
+            lo = mid
+        else:
+            hi = mid
+    return round(lo, 1)
+
+
 def poligono_para_coords(poly):
     if poly is None or poly.is_empty:
         return []

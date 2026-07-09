@@ -260,30 +260,6 @@
       });
       return cont ? [somaX / cont, somaY / cont] : contorno[0];
     }
-    /* cota simples: 1 linha de chamada + 1 caixa preenchida com o texto —
-       versão enxuta (sem marca de aresta) só pro Afastamento Lateral, que
-       precisa aparecer no desenho (é o valor que muda com a altura e o
-       usuário precisa ler direto, sem abrir o painel). */
-    function cotaSimples(grupo, ancora, alvo, texto, dinamica) {
-      var largura = Math.max(50, texto.length * 6.4 + 16), altura = 21;
-      grupo.appendChild(svgEl("line", {
-        x1: ancora[0], y1: ancora[1], x2: alvo[0], y2: alvo[1],
-        stroke: dinamica ? "#B0402C" : "#14202C",
-      }));
-      var g = svgEl("g", {
-        class: dinamica ? "cota-caixa-dinamica" : "cota-caixa-fixa",
-        transform: "translate(" + (alvo[0] - largura / 2) + " " + (alvo[1] - altura / 2) + ")",
-      });
-      g.appendChild(svgEl("rect", { width: largura, height: altura }));
-      var t = svgEl("text", {
-        x: largura / 2, y: altura / 2 + 4, "text-anchor": "middle",
-        "font-family": "IBM Plex Mono, monospace", "font-size": "11", "font-weight": "700",
-      });
-      t.textContent = texto;
-      g.appendChild(t);
-      grupo.appendChild(g);
-    }
-
     function renderizar(d, H) {
       var gLote = limparGrupo("g-lote"), gMancha = limparGrupo("g-mancha"),
           gCotas = limparGrupo("g-cotas"), gAviso = limparGrupo("g-aviso");
@@ -312,31 +288,6 @@
         legenda("leg-mancha", "Projeção máx = " + fmtBR(d.mancha_area) + " m² (limitada por " + d.mancha_limitante + ")");
       } else {
         legenda("leg-mancha", "");
-      }
-
-      /* Afastamento Lateral — o único valor que muda com a altura; precisa
-         estar visível no desenho (não só na fórmula do slider), senão o
-         usuário arrasta a altura e não vê o número mudando. Aresta não-
-         testada mais longa, mesma escolha de antes. */
-      if (!d.inconstruivel) {
-        var indicesTestadaLat = {};
-        (d.testadas || []).forEach(function (t) { t.indices_arestas.forEach(function (i) { indicesTestadaLat[i] = true; }); });
-        var melhorILat = -1, melhorCompLat = 0;
-        for (var iLat = 0; iLat < n; iLat++) {
-          if (indicesTestadaLat[iLat]) continue;
-          var paLat = d.contorno[iLat], pbLat = d.contorno[(iLat + 1) % n];
-          var compLat = Math.hypot(pbLat[0] - paLat[0], pbLat[1] - paLat[1]);
-          if (compLat > melhorCompLat) { melhorCompLat = compLat; melhorILat = iLat; }
-        }
-        if (melhorILat >= 0) {
-          var pa3 = d.contorno[melhorILat], pb3 = d.contorno[(melhorILat + 1) % n];
-          var meioLat3 = [(pa3[0] + pb3[0]) / 2, (pa3[1] + pb3[1]) / 2];
-          var normalLat3 = normalSaida(pa3, pb3);
-          var ancoraLat3 = tr.pt(meioLat3[0], meioLat3[1]);
-          var dirLat3 = [-normalLat3[0] * tr.esc, normalLat3[1] * tr.esc]; // pra DENTRO do lote
-          var alvoLat3 = pontoNaDirecao(ancoraLat3, dirLat3, 28);
-          cotaSimples(gCotas, ancoraLat3, alvoLat3, "Afastamento Lateral " + fmtBR(d.lateral_m, 2) + " m", true);
-        }
       }
 
       /* nome da via — único texto de contexto que fica no desenho, além
@@ -379,9 +330,15 @@
       var calcTxt;
       if (H < 8) calcTxt = "H < 8,0 m → afast. lateral/fundos mín. 1,50 m (t.4)";
       else if (H <= 12) calcTxt = "8,0 ≤ H ≤ 12,0 m → afast. 2,30 m (t.4)";
-      else calcTxt = "2,3 + (" + fmtBR(H, 1) + " − 12) ÷ B(" + est.fator_b + ") = " + fmtBR(d.lateral_m, 2) + " m" +
-        (est.fator_b === 4 ? " · B=4 conservador (centralidade local não verificada)" : " · B=" + est.fator_b);
+      else calcTxt = "2,3 + (" + fmtBR(H, 1) + " − 12) ÷ B(" + est.fator_b + ") = " + fmtBR(d.lateral_m, 2) + " m · B=" + est.fator_b;
       $("est-lat-calc").textContent = calcTxt;
+
+      /* Afastamento Lateral fora do desenho de novo (ficava atrapalhando
+         o desenho) — destaque abaixo da caixinha de altura pretendida. */
+      var elDestaque = $("est-lat-destaque");
+      if (elDestaque) elDestaque.textContent = fmtBR(d.lateral_m, 2);
+
+      if (d.altura_maxima) inH.max = d.altura_maxima;
     }
 
     function atualizarNumerosEstaticos(area) {
