@@ -481,6 +481,52 @@ de mudança de lei.
 (c) Plano Diretor está em revisão — base legal pode mudar; versionar a lei.
 Nunca esconder incerteza para a ficha "parecer completa".
 
+## FEITO (07/2026) — migração pra RAM viável de hospedar + git iniciado
+Depois de um conselho de IA (5 perspectivas independentes) analisar o
+projeto pra decidir o que fazer antes de ir pro ar, dois pontos de
+consenso forte viraram ação imediata:
+- **Git iniciado** (`git init` + commit inicial) — projeto não tinha versionamento
+  nenhum até aqui (nenhuma versão antiga do código existia de verdade, apesar
+  de "v1/v2/v3..." no histórico deste arquivo serem só anotações narrativas).
+  `.gitignore` ajustado pra excluir `data/geo/` inteiro (1,5GB de shapefile
+  bruto do BHMAP, não é código) e `.env`.
+- **BUG ESTRUTURAL DE RAM corrigido**: o motor carregava `LOTE_CTM.parquet`
+  (todo lote de Belo Horizonte, 365 mil polígonos) inteiro num GeoDataFrame
+  na memória a cada boot — medido em ~562MB de RAM só pra esse arquivo (o
+  parquet tem 65MB no disco; vira ~8,6x maior como objeto Shapely em RAM).
+  Processo inteiro rodava a ~800-900MB, inviabilizando qualquer hospedagem
+  grátis (Render free = 512MB). Trocado por consulta indexada em disco via
+  **DuckDB + extensão espacial (índice RTREE)**:
+  - Novo módulo `engine/db_lotes.py`: abre conexão read-only a
+    `data/geo/_cache/lotes.duckdb` (LOTE_CTM) e `indice_cadastral.duckdb`
+    (CADASTRO_IMOBILIARIO/IPTU) — nenhum dos dois carrega o arquivo inteiro
+    na memória. `lote_mais_proximo(con, x, y, limiar)` faz
+    `WHERE ST_DWithin(geom, ST_Point(x,y), limiar) ORDER BY dist LIMIT 1`,
+    usando o índice RTREE — só varre lotes perto do ponto, não os 365 mil.
+    `registro_por_indice_cadastral()` e `registros_indice_por_nulotctm()`
+    fazem o mesmo pro cadastro do IPTU (chave direta, índice B-tree comum).
+  - `scripts/preparar_dados.py` ganhou `construir_db_lotes()` e
+    `construir_db_indice()` — rodam depois da conversão CSV→Parquet de
+    sempre, geram os `.duckdb` a partir do parquet já existente. Rodar de
+    novo sempre que atualizar os CSVs do BHMAP.
+  - `engine/consulta.py`: `carregar_camadas()` não chama mais
+    `gpd.read_parquet(LOTE_CTM.parquet)` nem `pd.read_parquet(INDICE_CADASTRAL)`
+    — abre as 2 conexões DuckDB. `localizar_lote()` reescrita pra consultar
+    `lote_mais_proximo()` em vez de `.distance()` no GeoDataFrame inteiro;
+    mesmo formato de retorno de antes (`{"row", "poly", "distancia_m"}`),
+    só que `row` agora é um dict simples (só usa `.get()`, compatível).
+  - `engine/indice_cadastral.py` (`buscar_por_indice`) e
+    `webapp/app.py` (`_montar_identificacao`) também migrados pras novas
+    funções — nenhuma mudança de comportamento visível, só a fonte do dado.
+  - **Resultado medido** (mesmo processo, mesma máquina): RAM caiu de
+    ~800-900MB pra **~270-277MB**. Consulta real testada (endereço, índice
+    cadastral, lote inconstruível, slider de altura) sem regressão.
+  - `requirements.txt` criado (não existia) com `duckdb` incluído.
+  ARMADILHA se mexer nisso de novo: RTREE do DuckDB exige a coluna de
+  geometria como `GEOMETRY` puro (sem CRS no tipo) — `geometry::GEOMETRY`
+  no CREATE TABLE, senão dá `Binder Error: RTree indexes can only be
+  created over GEOMETRY columns` mesmo a coluna já sendo geometria.
+
 ## Roteiro
 - Fase 1.5 (ATUAL): geocodificação endereço→lat/lon + bateria de testes com os
   endereços de resposta conhecida do Arthur. GATE: só ir p/ fase 2 se bater.
@@ -492,12 +538,14 @@ Nunca esconder incerteza para a ficha "parecer completa".
 ```
 data/geo/       shapefiles + CSVs do BHMAP (EPSG:31983) — viária e os CSVs
                 novos (LOTE_CTM, CADASTRO_IMOBILIARIO etc.) são grandes, fora do zip
-data/geo/_cache/  Parquet/GeoParquet gerados por scripts/preparar_dados.py — não versionar
+data/geo/_cache/  Parquet/GeoParquet + lotes.duckdb/indice_cadastral.duckdb
+                gerados por scripts/preparar_dados.py — não versionar
 data/params/    Anexo XII em JSON (ca_quota.json, afastamentos_alturas.json)
 engine/consulta.py       motor: python3 engine/consulta.py <lat> <lon> [--json]
+engine/db_lotes.py       consulta indexada (DuckDB) do LOTE_CTM e do IPTU — não carrega na RAM
 engine/geocode.py        endereço -> lat/lon (Mapbox)
 engine/indice_cadastral.py   índice cadastral -> lat/lon (direto, sem geocodificação)
-scripts/preparar_dados.py    converte CSVs grandes p/ Parquet — rodar após CSV novo/atualizado
+scripts/preparar_dados.py    converte CSVs grandes p/ Parquet + constrói os .duckdb — rodar após CSV novo/atualizado
 webapp/         Flask local (landing + consulta) — sem login/banco/deploy ainda
 docs/           lei_completa.txt, anexo12.txt, ficha_conferencia.html
 ```

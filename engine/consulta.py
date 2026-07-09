@@ -29,6 +29,7 @@ import pandas as pd
 from shapely.geometry import Point
 
 from geocode import endereco_para_latlon, GeocodeError
+from db_lotes import conectar_lotes, conectar_indice, lote_mais_proximo, registros_indice_por_nulotctm
 
 BASE = Path(__file__).resolve().parent.parent
 GEO = BASE / "data" / "geo"
@@ -70,15 +71,18 @@ def carregar_camadas():
         "conexao_verde": gpd.read_file(GEO / "CONEXAO_VERDE_11181" / "CONEXAO_VERDE_11181.shp"),
     }
 
-    lote_ctm = _cache_ou_none("LOTE_CTM.parquet")
-    if lote_ctm is None:
-        print("AVISO: data/geo/_cache/LOTE_CTM.parquet não encontrado — "
+    # lote_ctm e indice_cadastral NÃO carregam mais o arquivo inteiro na RAM
+    # (eram ~562MB e ~180MB) — viram conexões DuckDB read-only, consultadas
+    # sob demanda por ponto/chave (engine/db_lotes.py). Ver CLAUDE.md.
+    con_lotes = conectar_lotes()
+    if con_lotes is None:
+        print("AVISO: data/geo/_cache/lotes.duckdb não encontrado — "
               "rode 'python scripts/preparar_dados.py'. Testada/área real ficará indisponível.",
               file=sys.stderr)
-    extras["lote_ctm"] = lote_ctm
+    extras["lote_ctm"] = con_lotes
     extras["centralidade"] = _cache_ou_none("CENTRALIDADE_LOCAL.parquet")
     extras["recuo"] = _cache_ou_none("RECUO_ALINHAMENTO.parquet")
-    extras["indice_cadastral"] = _cache_ou_none("INDICE_CADASTRAL.parquet")
+    extras["indice_cadastral"] = conectar_indice()
     extras["ade_setores"] = _cache_ou_none("ADE_SETORES.parquet")
     extras["bairro_oficial"] = _cache_ou_none("BAIRRO_OFICIAL.parquet")
     extras["bairro_popular"] = _cache_ou_none("BAIRRO_POPULAR.parquet")
@@ -87,17 +91,15 @@ def carregar_camadas():
     return zon, ade, via, extras
 
 
-def localizar_lote(ponto, lote_ctm, limiar_m: float = LIMIAR_LOTE_M):
-    """Acha o lote CTM mais próximo do ponto. None se não houver camada ou
-    se a distância exceder o limiar (lote não identificado com confiança)."""
-    if lote_ctm is None or lote_ctm.empty:
+def localizar_lote(ponto, con_lotes, limiar_m: float = LIMIAR_LOTE_M):
+    """Acha o lote CTM mais próximo do ponto, consultando o DuckDB indexado
+    (não carrega mais o arquivo inteiro na memória). None se não houver
+    conexão ou se a distância exceder o limiar (lote não identificado com
+    confiança)."""
+    achado = lote_mais_proximo(con_lotes, ponto.x, ponto.y, limiar_m)
+    if achado is None:
         return None
-    dist = lote_ctm.distance(ponto)
-    idx = dist.idxmin()
-    if dist.loc[idx] > limiar_m:
-        return None
-    row = lote_ctm.loc[idx]
-    poly = row.geometry
+    poly = achado["poly"]
     if poly.geom_type == "MultiPolygon":
         poly = max(poly.geoms, key=lambda g: g.area)
     # orientação CANÔNICA (sentido anti-horário) — precisa ser feita uma
@@ -106,7 +108,7 @@ def localizar_lote(ponto, lote_ctm, limiar_m: float = LIMIAR_LOTE_M):
     # polígono; reorientar depois quebraria essa correspondência.
     from shapely.geometry.polygon import orient
     poly = orient(poly, sign=1.0)
-    return {"row": row, "poly": poly, "distancia_m": round(float(dist.loc[idx]), 1)}
+    return {"row": achado["row"], "poly": poly, "distancia_m": achado["distancia_m"]}
 
 
 def _paralela_o_bastante(edge_dx, edge_dy, edge_len, via_geom, ponto_medio, limiar_cos=0.66):

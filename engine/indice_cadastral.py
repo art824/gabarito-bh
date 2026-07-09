@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 """
 Busca de lote por Índice Cadastral do IPTU (sem geocodificação de endereço).
-Usa data/geo/_cache/INDICE_CADASTRAL.parquet (índice -> NULOTCTM + dados do
-cadastro imobiliário) e o LOTE_CTM (geometria real do lote) pra achar o
-centróide e alimentar o mesmo `consultar()` usado na busca por endereço.
+Consulta direto os bancos DuckDB indexados (data/geo/_cache/*.duckdb) em vez
+de carregar INDICE_CADASTRAL/LOTE_CTM inteiros na memória — ver
+engine/db_lotes.py.
 """
 import re
 
 import geopandas as gpd
+
+from db_lotes import registro_por_indice_cadastral, lote_por_nulotctm
 
 
 class IndiceCadastralError(Exception):
@@ -18,33 +20,31 @@ def _normalizar(indice: str) -> str:
     return re.sub(r"\s+", "", indice or "").upper()
 
 
-def buscar_por_indice(indice: str, df_indice, lote_ctm) -> dict:
-    if df_indice is None:
+def buscar_por_indice(indice: str, con_indice, con_lotes) -> dict:
+    if con_indice is None:
         raise IndiceCadastralError(
             "Base de índice cadastral não carregada (rode scripts/preparar_dados.py)."
         )
-    if lote_ctm is None:
+    if con_lotes is None:
         raise IndiceCadastralError("Base de lotes (CTM) não carregada.")
 
     alvo = _normalizar(indice)
     if not alvo:
         raise IndiceCadastralError("Informe um índice cadastral.")
 
-    normalizados = df_indice["INDICE_CADASTRAL"].str.replace(r"\s+", "", regex=True).str.upper()
-    hit = df_indice[normalizados == alvo]
-    if hit.empty:
+    registro = registro_por_indice_cadastral(con_indice, alvo)
+    if registro is None:
         raise IndiceCadastralError(
             f"Índice cadastral '{indice}' não encontrado na base do IPTU."
         )
-    registro = hit.iloc[0]
     nulotctm = registro["NULOTCTM"]
 
-    lote_hit = lote_ctm[lote_ctm["NULOTCTM"] == nulotctm]
-    if lote_hit.empty:
+    achado = lote_por_nulotctm(con_lotes, nulotctm)
+    if achado is None:
         raise IndiceCadastralError(
             f"Índice '{indice}' encontrado, mas sem lote correspondente na base CTM (NULOTCTM {nulotctm})."
         )
-    poly = lote_hit.iloc[0].geometry
+    poly = achado["poly"]
     if poly.geom_type == "MultiPolygon":
         poly = max(poly.geoms, key=lambda g: g.area)
     centro = poly.representative_point()  # sempre dentro do polígono (centroid pode cair fora em formas côncavas)

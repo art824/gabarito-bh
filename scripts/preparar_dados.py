@@ -15,6 +15,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 import pandas as pd
 import geopandas as gpd
+import duckdb
 
 BASE = Path(__file__).resolve().parent.parent
 GEO = BASE / "data" / "geo"
@@ -59,6 +60,50 @@ def indice_cadastral_parquet():
           f"{len(df)} linhas em {time.time()-t0:.1f}s")
 
 
+def construir_db_lotes():
+    """LOTE_CTM.parquet -> lotes.duckdb com índice espacial RTREE. Isso é o
+    que tira o motor de carregar ~562MB desse arquivo na RAM toda vez que o
+    servidor sobe — a consulta passa a ser feita direto no arquivo em disco,
+    só varrendo o que está perto do ponto pedido (ver engine/db_lotes.py)."""
+    origem = CACHE / "LOTE_CTM.parquet"
+    if not origem.exists():
+        print("  PULADO — LOTE_CTM.parquet não existe ainda (rode geo_parquet primeiro)")
+        return
+    destino = CACHE / "lotes.duckdb"
+    if destino.exists():
+        destino.unlink()
+    t0 = time.time()
+    con = duckdb.connect(str(destino))
+    con.execute("INSTALL spatial; LOAD spatial;")
+    con.execute(f"""
+        CREATE TABLE lotes AS
+        SELECT FID, ID_LT, NULOTCTM, ID_QUADRA_CTM, AREA_M2, geometry::GEOMETRY AS geom
+        FROM read_parquet('{origem.as_posix()}')
+    """)
+    con.execute("CREATE INDEX idx_lotes_geom ON lotes USING RTREE (geom)")
+    con.close()
+    print(f"  LOTE_CTM.parquet -> lotes.duckdb (c/ índice RTREE): {time.time()-t0:.1f}s")
+
+
+def construir_db_indice():
+    """INDICE_CADASTRAL.parquet -> indice_cadastral.duckdb — mesma ideia:
+    tira ~180MB de RAM do boot, consulta por NULOTCTM/índice cadastral vira
+    uma query pontual em vez de escanear o DataFrame inteiro toda vez."""
+    origem = CACHE / "INDICE_CADASTRAL.parquet"
+    if not origem.exists():
+        print("  PULADO — INDICE_CADASTRAL.parquet não existe ainda")
+        return
+    destino = CACHE / "indice_cadastral.duckdb"
+    if destino.exists():
+        destino.unlink()
+    t0 = time.time()
+    con = duckdb.connect(str(destino))
+    con.execute(f"CREATE TABLE indice AS SELECT * FROM read_parquet('{origem.as_posix()}')")
+    con.execute("CREATE INDEX idx_indice_nulotctm ON indice (NULOTCTM)")
+    con.close()
+    print(f"  INDICE_CADASTRAL.parquet -> indice_cadastral.duckdb: {time.time()-t0:.1f}s")
+
+
 if __name__ == "__main__":
     CACHE.mkdir(parents=True, exist_ok=True)
     print("Preparando camadas (Parquet/GeoParquet)...")
@@ -72,4 +117,6 @@ if __name__ == "__main__":
     geo_parquet("BAIRRO_POPULAR.csv", "BAIRRO_POPULAR.parquet")
     geo_parquet("PROJ_VIARIO_PRIOR_11181.csv", "PROJ_VIARIO_PRIOR.parquet")
     indice_cadastral_parquet()
+    construir_db_lotes()
+    construir_db_indice()
     print("Concluído.")

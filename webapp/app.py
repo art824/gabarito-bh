@@ -25,6 +25,7 @@ from desenho_lote import (
 )
 from geocode import endereco_para_latlon, GeocodeError
 from indice_cadastral import buscar_por_indice, IndiceCadastralError
+from db_lotes import registros_indice_por_nulotctm
 
 app = Flask(__name__)
 
@@ -185,15 +186,15 @@ def _montar_identificacao(res: dict, extras: dict) -> dict | None:
     lote_real = res.get("lote_real")
     if not lote_real or not lote_real.get("nulotctm"):
         return None
-    idx = extras.get("indice_cadastral")
-    if idx is None:
+    con_indice = extras.get("indice_cadastral")
+    if con_indice is None:
         return None
 
     nulotctm = lote_real["nulotctm"]
-    registros = idx[idx["NULOTCTM"] == nulotctm]
-    if registros.empty:
+    registros = registros_indice_por_nulotctm(con_indice, nulotctm)
+    if not registros:
         return None
-    registro = registros.iloc[0]
+    registro = registros[0]
     n_economias = len(registros)
 
     setor, quadra, lote_ctm_num = (nulotctm[:2], nulotctm[2:7], nulotctm[7:]) if len(nulotctm) == 12 else (None, None, None)
