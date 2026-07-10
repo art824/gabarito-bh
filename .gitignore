@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 data/geo/
 data/relatos_desenho.jsonl
+dados_producao.zip
