@@ -27,7 +27,7 @@ def conectar_lotes():
     if not DB_LOTES.exists():
         return None
     con = duckdb.connect(str(DB_LOTES), read_only=True)
-    con.execute("LOAD spatial;")
+    con.execute("INSTALL spatial; LOAD spatial;")
     return con
 
 
