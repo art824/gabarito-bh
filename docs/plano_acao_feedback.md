@@ -38,6 +38,14 @@ antes de feature** — "melhor mostrar 'indisponível' do que informação errad
    (potencial construtivo) replicado na página de consulta, com o
    zoneamento já preenchido pelo lote consultado, mantendo o slider de
    área. K2: "é o que os corretores mais querem ver".
+9. **PDF diagramado de verdade** (item do Arthur, não das entrevistas):
+   hoje o export é um `window.print()` com CSS de impressão — funciona,
+   mas não tem cara de documento que vale dinheiro. Redesenhar o PDF como
+   peça diagramada (layout de prancha/relatório profissional: capa ou
+   cabeçalho com identificação do lote, ficha organizada, anexo/desenho,
+   carimbo, fontes e disclaimers) — é o que justifica ele virar o recurso
+   PAGO já decidido pra fase de monetização. Avaliar gerar server-side
+   (ex. WeasyPrint) vs. melhorar o print CSS ao limite.
 
 ## Fase 4 — CINDACTA (começa JÁ, em paralelo — Arthur pilotando os dados)
 9. "Make or break" segundo a K2: altura máxima da aeronáutica
