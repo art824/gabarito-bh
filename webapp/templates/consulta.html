@@ -2,6 +2,9 @@
 
 {% block titulo %}Consultar lote — Gabarito{% endblock %}
 
+{# Tag de origem do dado — transparência pedida pela K2: cada informação diz de onde veio #}
+{% macro origem(txt) %}<span class="origem mono">{{ txt }}</span>{% endmacro %}
+
 {% block conteudo %}
 
 <div class="container consulta-topo">
@@ -72,10 +75,12 @@
         <div class="cel cel-3">
           <span class="k">Endereço no IPTU</span>
           <span class="v">{{ identificacao.endereco_iptu }}{% if identificacao.cep %} <span class="sub-inline">· CEP {{ identificacao.cep }}</span>{% endif %}</span>
+          {{ origem('Cadastro Imobiliário do IPTU · BHMAP') }}
         </div>
         {% if resultado.bairro_oficial %}
         <div class="cel {{ 'cel-2' if resultado.bairro_popular and resultado.bairro_popular != resultado.bairro_oficial else 'cel-3' }}">
           <span class="k">Bairro oficial</span><span class="v">{{ resultado.bairro_oficial }}</span>
+          {{ origem('BHMAP · Bairro Oficial') }}
         </div>
         {% endif %}
         {% if resultado.bairro_popular and resultado.bairro_popular != resultado.bairro_oficial %}
@@ -85,7 +90,7 @@
 
       <div class="celulas">
         <div class="cel cel-3">
-          <span class="k">Índice cadastral</span>
+          <span class="k">Índice cadastral{% if identificacao.n_economias > 1 %} · {{ 'unidade consultada' if identificacao.unidade_consultada else '1 de ' ~ identificacao.n_economias ~ ' unidades' }}{% endif %}</span>
           <span class="v vnum">{{ identificacao.indice_cadastral }}</span>
         </div>
         {% if identificacao.setor %}
@@ -93,14 +98,21 @@
         <div class="cel cel-1"><span class="k">Quadra CTM</span><span class="v vnum">{{ identificacao.quadra }}</span></div>
         <div class="cel cel-1"><span class="k">Lote CTM</span><span class="v vnum">{{ identificacao.lote_ctm_num }}</span></div>
         {% endif %}
+        {% if identificacao.n_economias > 1 and not identificacao.unidade_consultada %}
+        <div class="cel cel-full">
+          <span class="sub">Este lote tem {{ identificacao.n_economias }} unidades (economias) no cadastro do IPTU, cada uma com índice próprio:
+          {{ identificacao.indices_lote[:6]|join(' · ') }}{% if identificacao.n_economias > 6 %} e mais {{ identificacao.n_economias - 6 }}{% endif %}.
+          Exibindo a primeira — para dados de uma unidade específica, consulte pelo índice dela.</span>
+        </div>
+        {% endif %}
         {% if identificacao.area_terreno_iptu %}
-        <div class="cel"><span class="k">Área do terreno · IPTU</span><span class="v vnum">{{ '%g'|format(identificacao.area_terreno_iptu) }} <i>m²</i></span></div>
+        <div class="cel"><span class="k">Área do terreno · IPTU</span><span class="v vnum">{{ '%g'|format(identificacao.area_terreno_iptu) }} <i>m²</i></span>{{ origem('declarada no cadastro do IPTU') }}</div>
         {% endif %}
         {% if identificacao.area_ctm %}
-        <div class="cel"><span class="k">Área do terreno · CTM</span><span class="v vnum">{{ '%g'|format(identificacao.area_ctm) }} <i>m²</i></span></div>
+        <div class="cel"><span class="k">Área do terreno · CTM</span><span class="v vnum">{{ '%g'|format(identificacao.area_ctm) }} <i>m²</i></span>{{ origem('calculada do polígono do lote (CTM)') }}</div>
         {% endif %}
         {% if resultado.lote_real and resultado.lote_real.testadas and not resultado.lote_real.geometria_complexa %}
-        <div class="cel"><span class="k">Testada · CTM</span><span class="v vnum">{{ '%g'|format(resultado.lote_real.testadas[0].comprimento_m) }} <i>m</i></span></div>
+        <div class="cel"><span class="k">Testada · CTM</span><span class="v vnum">{{ '%g'|format(resultado.lote_real.testadas[0].comprimento_m) }} <i>m</i></span>{{ origem('calculada do polígono do lote (CTM)') }}</div>
         {% endif %}
         {% if identificacao.divergencia_area %}
         <div class="cel cel-full cel-aviso">⚠ {{ identificacao.divergencia_area }}</div>
@@ -127,12 +139,37 @@
         <div class="cel cel-2"><span class="k">Padrão de acabamento</span><span class="v">{{ identificacao.edificacao.padrao_acabamento or '—' }}</span></div>
         <div class="cel cel-3"><span class="k">Ano de construção</span><span class="v vnum">{{ identificacao.edificacao.ano_construcao|int if identificacao.edificacao.ano_construcao else '—' }}</span></div>
         <div class="cel cel-3"><span class="k">Área construída</span><span class="v vnum">{% if identificacao.edificacao.area_construcao %}{{ '%g'|format(identificacao.edificacao.area_construcao) }} <i>m²</i>{% else %}—{% endif %}</span></div>
-        {% if identificacao.n_economias > 1 %}
-        <div class="cel cel-full"><span class="sub">Dados de uma unidade de referência — o lote tem {{ identificacao.n_economias }} unidades cadastradas.</span></div>
-        {% endif %}
+        <div class="cel cel-full">
+          {{ origem('Cadastro Imobiliário do IPTU · dados ' + ('da unidade consultada' if identificacao.unidade_consultada else 'de uma unidade de referência' + (' — o lote tem ' ~ identificacao.n_economias ~ ' unidades cadastradas' if identificacao.n_economias > 1 else '')) ) }}
+          <span class="sub">O cadastro reflete o que foi registrado na Prefeitura — reformas ou construções não averbadas podem não constar.</span>
+        </div>
+      </div>
+      {% else %}
+      <div class="subcard-titulo"><h4>Edificação existente</h4></div>
+      <div class="celulas">
+        <div class="cel cel-full">
+          <span class="v vsub">Sem registro de edificação para esta unidade no cadastro do IPTU.</span>
+          <span class="sub">Isso NÃO garante que o lote esteja vago: pode existir edificação ainda não registrada ou não averbada na base a que temos acesso. Confira em campo ou na Prefeitura.</span>
+          {{ origem('Cadastro Imobiliário do IPTU · BHMAP') }}
+        </div>
       </div>
       {% endif %}
     </section>
+    {% endif %}
+
+    {% if veredito %}
+    <div class="veredito">
+      <p class="veredito-titulo mono">Síntese — pelas bases consultadas</p>
+      {% for v in veredito.verificado %}
+      <p class="veredito-ok">✓ {{ v }}</p>
+      {% endfor %}
+      {% for a in veredito.atencoes %}
+      <p class="veredito-atencao">⚠ {{ a }}</p>
+      {% endfor %}
+      {% if veredito.nao_verificado %}
+      <p class="veredito-nv"><b>Não verificado por esta ficha:</b> {{ veredito.nao_verificado|join(' · ') }}.</p>
+      {% endif %}
+    </div>
     {% endif %}
 
     {% set ns.sec = ns.sec + 1 %}
@@ -147,6 +184,7 @@
           <span class="k">Zoneamento</span>
           <span class="v vnum">{{ resultado.zoneamento.sigla }}</span>
           <span class="sub">{{ resultado.zoneamento.descricao }}</span>
+          {{ origem('BHMAP · camada Zoneamento') }}
         </div>
         <div class="cel cel-3">
           <span class="k">ADEs incidentes</span>
@@ -154,16 +192,18 @@
           {% if resultado.ade_setor_nome %}
           <span class="sub">Setor: {{ resultado.ade_setor_nome }}</span>
           {% endif %}
+          {{ origem('BHMAP · camadas ADE' + (' + Setores de ADE' if resultado.ade_setor_nome else '')) }}
         </div>
         {% if resultado.lote_real %}
-        <div class="cel"><span class="k">Centralidade Local</span><span class="v">{{ 'Sim' if resultado.lote_real.centralidade_local else 'Não' }}</span></div>
-        <div class="cel"><span class="k">Conexão Verde</span><span class="v">{{ 'Sim' if resultado.lote_real.conexao_verde else 'Não' }}</span></div>
+        <div class="cel"><span class="k">Centralidade Local</span><span class="v">{{ 'Sim' if resultado.lote_real.centralidade_local else 'Não' }}</span>{{ origem('BHMAP · Centralidade Local') }}</div>
+        <div class="cel"><span class="k">Conexão Verde</span><span class="v">{{ 'Sim' if resultado.lote_real.conexao_verde else 'Não' }}</span>{{ origem('BHMAP · Conexão Verde') }}</div>
         {% endif %}
         {% if resultado.via_mais_proxima %}
         <div class="cel {{ 'cel-2' if resultado.lote_real else 'cel-full' }}">
           <span class="k">Via do lote (provável)</span>
           <span class="v">{{ resultado.via_mais_proxima.nome }}</span>
           <span class="sub">{{ resultado.via_mais_proxima.classificacao }} · {{ resultado.via_mais_proxima.faixa_largura }} · a {{ resultado.via_mais_proxima.distancia_m }} m do ponto</span>
+          {{ origem('BHMAP · Classificação Viária (via mais próxima do ponto)') }}
         </div>
         {% endif %}
       </div>
@@ -187,11 +227,13 @@
         {% if f.coef_aproveitamento.obs %}
         <div class="cel cel-full"><span class="k">Observação do CA</span><span class="v vsub">{{ f.coef_aproveitamento.obs }}</span></div>
         {% endif %}
+        <div class="cel cel-full cel-origem-linha">{{ origem('Coeficientes e quota: Anexo XII, tabela 10, pela sigla ' + resultado.zoneamento.sigla) }}</div>
         {% endif %}
 
         <div class="cel">
           <span class="k">Afastamento frontal</span>
           <span class="v vnum">{{ f.afastamento_frontal_m }}{% if f.afastamento_frontal_m is number %} <i>m</i>{% endif %}</span>
+          {{ origem('Anexo XII, t.3, pela classificação da via') }}
         </div>
         {% if amd_valor is not none %}
         <div class="cel">
@@ -211,11 +253,13 @@
         <div class="cel cel-3">
           <span class="k">Permeabilidade mín. (TP)</span>
           <span class="v vnum">{{ f.taxa_permeabilidade_min }}</span>
+          {{ origem('BHMAP · camada Taxa de Permeabilidade (Anexo II)') }}
         </div>
         <div class="cel cel-3">
           <span class="k">Ocupação máx. (TO)</span>
           <span class="v vnum">{{ f.taxa_ocupacao_max }}</span>
           {% if f.tp_observacao %}<span class="sub">{{ f.tp_observacao }}</span>{% endif %}
+          {{ origem('Anexo XII, t.11, pela TP do lote') }}
         </div>
         {% endif %}
       </div>
@@ -237,6 +281,10 @@
           <p>Estudo preliminar com os parâmetros desta ficha. Não considera altimetria de ADE, exceções por setor, AMD nem regras de licenciamento.</p>
         </div>
       </header>
+
+      {% if estudo.anexo_indisponivel %}
+      <div class="cel cel-full cel-aviso anexo-aviso">⚠ {{ estudo.anexo_indisponivel }}</div>
+      {% endif %}
 
       <div class="estudo-corpo">
 
@@ -282,7 +330,7 @@
 
           {% if not (estudo.testada_real and estudo.area_real) %}
           <div class="painel-grupo">
-            <span class="grupo-k">Dimensões do lote <em>não identificado no cadastro — informe pra simular</em></span>
+            <span class="grupo-k">Dimensões do lote <em>{% if estudo.anexo_indisponivel %}estudo genérico — medidas editáveis{% else %}não identificado no cadastro — informe pra simular{% endif %}</em></span>
             <div class="dims-manuais">
               <label>Testada
                 <span class="estudo-input"><input type="number" id="est-testada" min="3" max="200" step="0.5" value="12" inputmode="decimal"><i class="mono">m</i></span>
@@ -363,6 +411,18 @@
       </ul>
     </div>
     {% endif %}
+
+    <div class="bloco-fontes">
+      <h4>Fontes dos dados</h4>
+      <ul>
+        <li><b>BHMAP (Prefeitura de BH)</b> — camadas oficiais de Zoneamento, ADE e Setores de ADE, Classificação Viária, Taxa de Permeabilidade, Conexão Verde, Conexão de Fundo de Vale, Centralidade Local, Recuo de Alinhamento, Projeto Viário Prioritário e Bairros. Base baixada em 07/2026.</li>
+        <li><b>Cadastro Técnico Municipal (CTM)</b> — polígono, área e testada do lote (via BHMAP).</li>
+        <li><b>Cadastro Imobiliário do IPTU</b> — índice cadastral, endereço oficial, infraestrutura e edificação (via BHMAP).</li>
+        <li><b>Lei 11.181/19, Anexo XII</b> — tabelas 3, 4, 5, 10, 11 e 12 (coeficientes, quota, afastamentos, TP/TO), estruturadas a partir do texto oficial.</li>
+        <li><b>Geocodificação</b> — Mapbox (conversão do endereço digitado em coordenada; o lote é sempre confirmado contra o CTM).</li>
+      </ul>
+      <p class="sub">A base legal pode mudar (Plano Diretor em revisão) e as camadas são atualizadas periodicamente pela Prefeitura — divergências pontuais podem existir entre a data da base e o cadastro vigente.</p>
+    </div>
 
     <div class="ficha-rodape-export">
       <button type="button" class="botao btn-exportar">Exportar ficha (PDF)</button>

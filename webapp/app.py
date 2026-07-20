@@ -8,6 +8,7 @@ Uso:
     abrir http://localhost:5000
 """
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -180,9 +181,14 @@ def _SIM_NAO(v):
     return "Sim" if str(v).strip().upper() == "SIM" else "Não"
 
 
-def _montar_identificacao(res: dict, extras: dict) -> dict | None:
+def _montar_identificacao(res: dict, extras: dict, indice_consultado: str | None = None) -> dict | None:
     """Bloco 'Identificação do lote' — junta com o cadastro imobiliário (IPTU)
-    pelo NULOTCTM achado via CTM. Espelha o relatório do SIURBE."""
+    pelo NULOTCTM achado via CTM. Espelha o relatório do SIURBE.
+
+    Um lote pode ter VÁRIAS unidades (economias) no IPTU, cada uma com seu
+    índice cadastral. Quando a busca foi por índice, exibimos exatamente a
+    unidade consultada — devolver a "primeira do banco" fazia o site mostrar
+    um índice diferente do digitado (bug real apontado pela K2)."""
     lote_real = res.get("lote_real")
     if not lote_real or not lote_real.get("nulotctm"):
         return None
@@ -194,8 +200,24 @@ def _montar_identificacao(res: dict, extras: dict) -> dict | None:
     registros = registros_indice_por_nulotctm(con_indice, nulotctm)
     if not registros:
         return None
+
+    def _norm_indice(s):
+        return re.sub(r"\s+", "", str(s or "")).upper()
+
+    # ordem do banco é arbitrária — ordenar deixa a lista legível e a
+    # "primeira unidade" exibida determinística entre consultas
+    registros.sort(key=lambda r: _norm_indice(r.get("INDICE_CADASTRAL")))
     registro = registros[0]
+    unidade_consultada = False
+    if indice_consultado:
+        alvo = _norm_indice(indice_consultado)
+        for r in registros:
+            if _norm_indice(r.get("INDICE_CADASTRAL")) == alvo:
+                registro = r
+                unidade_consultada = True
+                break
     n_economias = len(registros)
+    indices_lote = [r.get("INDICE_CADASTRAL") for r in registros if r.get("INDICE_CADASTRAL")]
 
     setor, quadra, lote_ctm_num = (nulotctm[:2], nulotctm[2:7], nulotctm[7:]) if len(nulotctm) == 12 else (None, None, None)
 
@@ -231,6 +253,8 @@ def _montar_identificacao(res: dict, extras: dict) -> dict | None:
 
     return {
         "indice_cadastral": registro.get("INDICE_CADASTRAL"),
+        "unidade_consultada": unidade_consultada,
+        "indices_lote": indices_lote,
         "endereco_iptu": " ".join(
             str(p) for p in [registro.get("TIPO_LOGRADOURO"), registro.get("NOME_LOGRADOURO"),
                               registro.get("NUMERO_IMOVEL")] if p and str(p).strip()
@@ -244,6 +268,62 @@ def _montar_identificacao(res: dict, extras: dict) -> dict | None:
         "n_economias": n_economias,
         "edificacao": edificacao,
     }
+
+
+def _montar_veredito(res: dict) -> dict | None:
+    """Síntese "pode construir?" pro topo da ficha (pedido da K2, pensando em
+    corretores). REGRA DE OURO: nunca afirmar além do que as bases mostram —
+    o veredito diz o que foi verificado, o que pede atenção e o que NÃO foi
+    verificado, sempre com origem."""
+    if not res.get("zoneamento"):
+        return None
+    ficha = res.get("ficha", {})
+    ca = ficha.get("coef_aproveitamento") or {}
+
+    def _pct(txt):
+        m = re.match(r"\s*(\d+(?:[.,]\d+)?)\s*%", str(txt or ""))
+        return float(m.group(1).replace(",", ".")) if m else None
+
+    to_pct = _pct(ficha.get("taxa_ocupacao_max"))
+    tp_pct = _pct(ficha.get("taxa_permeabilidade_min"))
+
+    atencoes = []
+    if to_pct is not None and to_pct <= 10:
+        atencoes.append(
+            f"Parâmetros muito restritivos nesta zona: ocupação máxima de {to_pct:g}% "
+            f"do terreno (camada de TP/TO do BHMAP)."
+        )
+    if res.get("ades"):
+        atencoes.append(
+            "Lote dentro de ADE (" + ", ".join(res["ades"]) + ") — exceções da ADE "
+            "prevalecem sobre a regra geral; confira as exceções na ficha."
+        )
+    for alerta in res.get("alertas", []):
+        if "não verificad" not in alerta:
+            atencoes.append(alerta)
+
+    nao_verificado = [
+        "Altura máxima de aeródromo (CINDACTA/DECEA)",
+        "Área de Preservação Permanente (APP) e meio ambiente",
+        "Patrimônio cultural (proteções e tombamentos)",
+    ]
+    nao_verificado += [a.rstrip(".") for a in res.get("alertas", []) if "não verificad" in a]
+
+    ca_bas = ca.get("ca_bas")
+    verificado = []
+    if ca_bas is not None:
+        verificado.append(
+            f"O zoneamento ({res['zoneamento']['sigla']}) permite construir — "
+            f"coeficiente básico {ca_bas:g} (até {ca_bas:g}× a área do terreno, "
+            f"sem contrapartida). Fonte: Anexo XII, t.10."
+        )
+    if to_pct is not None and tp_pct is not None:
+        verificado.append(
+            f"Ocupação máxima de {to_pct:g}% e permeabilidade mínima de {tp_pct:g}% "
+            f"do terreno. Fonte: camada TP/TO do BHMAP + t.11."
+        )
+
+    return {"verificado": verificado, "atencoes": atencoes, "nao_verificado": nao_verificado}
 
 
 def _texto_regra(regra) -> str:
@@ -271,7 +351,7 @@ def consulta_page():
         "resultado": None, "erro": None, "endereco": "", "indice_cadastral": "",
         "modo": "endereco",
         "rotulos_ca": ROTULOS_CA, "amd_valor": None,
-        "estudo": None, "identificacao": None,
+        "estudo": None, "identificacao": None, "veredito": None,
     }
     if request.method == "GET":
         return render_template("consulta.html", **contexto)
@@ -326,8 +406,41 @@ def consulta_page():
         estudo["lat"] = g["lat"]
         estudo["lon"] = g["lon"]
         estudo["desenho_inicial"] = _calcular_desenho(g["lat"], g["lon"], 9.0, res=res)
+        # FALHA HONESTA (princípio da K2): melhor "indisponível" do que um
+        # desenho possivelmente errado. Três estados em que não confiamos no
+        # desenho automático — cai no modo manual com aviso explícito.
+        lote_real = res.get("lote_real")
+        estudo["anexo_indisponivel"] = None
+        if lote_real and lote_real.get("geometria_complexa"):
+            estudo["anexo_indisponivel"] = (
+                "Este lote confronta 3 ou mais ruas — o desenho automático ainda não "
+                "cobre esse caso com segurança. Abaixo, um estudo genérico com medidas "
+                "editáveis (não é o desenho real do lote)."
+            )
+        elif estudo.get("testada_real") and estudo["desenho_inicial"] is None:
+            estudo["anexo_indisponivel"] = (
+                "Não foi possível calcular o desenho deste lote com segurança. Abaixo, "
+                "um estudo genérico com medidas editáveis (não é o desenho real do lote)."
+            )
+        elif estudo["desenho_inicial"] and estudo["desenho_inicial"].get("inconstruivel"):
+            estudo["anexo_indisponivel"] = (
+                "O modelo de afastamentos não encontrou área construível em nenhuma "
+                "altura para o formato deste lote — pode ser limitação do modelo em "
+                "formatos muito irregulares, não necessariamente do lote. Para não "
+                "exibir um desenho enganoso, o anexo automático fica indisponível. "
+                "Abaixo, um estudo genérico com medidas editáveis."
+            )
+        if estudo["anexo_indisponivel"]:
+            # zera o modo "lote real" — o template e o script caem no modo manual
+            estudo["testada_real"] = None
+            estudo["area_real"] = None
+            estudo["desenho_inicial"] = None
     contexto["estudo"] = estudo
-    contexto["identificacao"] = _montar_identificacao(res, EXTRAS)
+    contexto["identificacao"] = _montar_identificacao(
+        res, EXTRAS,
+        indice_consultado=contexto["indice_cadastral"] if modo == "indice" else None,
+    )
+    contexto["veredito"] = _montar_veredito(res)
     for exc in ficha.get("excecoes_incidentes", []):
         exc["regra"] = _texto_regra(exc["regra"])
     return render_template("consulta.html", **contexto)

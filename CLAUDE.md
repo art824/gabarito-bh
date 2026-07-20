@@ -527,6 +527,49 @@ consenso forte viraram ação imediata:
   no CREATE TABLE, senão dá `Binder Error: RTree indexes can only be
   created over GEOMETRY columns` mesmo a coluna já sendo geometria.
 
+## FEITO (07/2026) — Fases 1+2 do plano de feedback (K2 + Soluz)
+Plano completo em `docs/plano_acao_feedback.md`. Executadas as fases de
+CONFIANÇA e TRANSPARÊNCIA de uma vez, com o IBED oficial 2295519 (Rua do
+Carmelo 93) como referência de conferência:
+- **BUG REAL do índice cadastral corrigido** (apontado pela K2, reproduzido
+  com o IBED): um lote pode ter VÁRIAS economias no IPTU, cada uma com seu
+  índice; `_montar_identificacao` exibia `registros[0]` — quem consultava
+  o índice X via o índice Y na ficha (perda de confiança imediata). Fix:
+  novo parâmetro `indice_consultado`; busca por índice exibe EXATAMENTE a
+  unidade consultada (rótulo "unidade consultada"); busca por endereço
+  rotula "1 de N unidades" e lista os índices do lote (até 6). Registros
+  ordenados por índice pra primeira unidade ser determinística.
+- **Falha honesta no anexo interativo** (princípio K2: "indisponível" >
+  errado): 3 estados param de fingir desenho — geometria complexa (3+
+  ruas), desenho que falhou, e inconstruível já na altura mínima (caso
+  Fernandes Tourinho — pode ser limitação do modelo, não do lote). Nesses
+  casos: aviso explícito `.anexo-aviso` + cai no modo manual genérico
+  (server zera testada_real/area_real/desenho_inicial → template e JS caem
+  no modo manual sozinhos).
+- **Bateria de regressão**: `python tests/regressao_lotes.py` — lotes de
+  resposta conhecida conferidos contra IBED (Carmelo por índice, Praça da
+  Liberdade por lat/lon). Rodar SEMPRE antes de publicar mudança no motor;
+  sai 1 se divergir. Adicionar 1 caso novo a cada IBED que o Arthur trouxer.
+- **Origem por campo** (macro Jinja `origem()` + classe `.origem`): cada
+  célula da ficha diz a fonte (BHMAP camada X / IPTU / CTM calculado /
+  Anexo XII tabela N). Bloco "Fontes dos dados" no fim da ficha com a data
+  da base (07/2026). ATENÇÃO: ao adicionar célula nova na ficha, SEMPRE
+  incluir a tag de origem.
+- **Edificação com origem + disclaimer**: quando não há registro, a ficha
+  agora DIZ "sem registro — não garante lote vago, pode haver construção
+  não averbada" (antes o bloco simplesmente sumia — K2 apontou o risco de
+  falso negativo). Quando há, mostra se é da unidade consultada ou de
+  referência.
+- **Veredito "pode construir?"** (`_montar_veredito` em app.py): síntese no
+  topo da ficha p/ corretores — ✓ verificado (CA básico, TP/TO, com fonte),
+  ⚠ atenções (TO ≤ 10%, ADEs, alertas incidentes), e lista explícita do
+  NÃO verificado (CINDACTA, APP, patrimônio + alertas). REGRA: nunca
+  afirmar além das bases; sempre citar fonte.
+- IBED 2295519 também revelou a ESTRUTURA dos dados CINDACTA pra fase 4:
+  zona de proteção (ex. HIN), cota altimétrica limite (829m), cota do
+  terreno (800m), altura máxima = diferença (29m). Guardar PDFs de IBED
+  que o Arthur trouxer — são gabarito de conferência E fonte de estrutura.
+
 ## Roteiro
 - Fase 1.5 (ATUAL): geocodificação endereço→lat/lon + bateria de testes com os
   endereços de resposta conhecida do Arthur. GATE: só ir p/ fase 2 se bater.
