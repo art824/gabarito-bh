@@ -19,6 +19,24 @@
     return n.toLocaleString("pt-BR", { minimumFractionDigits: casas || 0, maximumFractionDigits: casas || 0 });
   }
 
+  /* Google Analytics: eventos personalizados (no-op se o gtag não carregou,
+     ex. bloqueador de anúncios — nunca pode quebrar o site) */
+  function ga(evento, params) {
+    if (typeof window.gtag === "function") window.gtag("event", evento, params || {});
+  }
+
+  /* ficha carregada = uma consulta bem-sucedida foi exibida */
+  if (document.getElementById("est-altura")) ga("consulta_visualizada");
+
+  /* primeiro uso do slider de altura nesta página */
+  var _sliderGA = document.getElementById("est-altura");
+  if (_sliderGA) {
+    var _sliderUsado = false;
+    _sliderGA.addEventListener("input", function () {
+      if (!_sliderUsado) { _sliderUsado = true; ga("slider_altura_usado"); }
+    });
+  }
+
   /* ---------- 1. Mapa vivo de BH: pings em loop com dados reais ---------- */
   var mapa = document.getElementById("mapa-vivo");
   if (mapa) {
@@ -502,6 +520,7 @@
         }).then(function () {
           document.getElementById("reportar-obs").hidden = false;
           document.getElementById("reportar-enviar").disabled = true;
+          ga("reportar_desenho", { tipo: tipo });
         }).catch(function () {});
       });
     }
@@ -533,6 +552,7 @@
     });
     document.getElementById("btn-export-confirmar").addEventListener("click", function () {
       interagiu = true;
+      ga("exportar_pdf");
       fecharModal();
       setTimeout(function () { window.print(); }, 120);
     });
