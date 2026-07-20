@@ -4,7 +4,11 @@ Origem: entrevistas com K2 Arquitetura (mercado/profissional) e Soluz
 (estudante). Princípio que atravessa tudo, dito pela K2: **confiabilidade
 antes de feature** — "melhor mostrar 'indisponível' do que informação errada".
 
-## Fase 1 — Confiança (bugs que queimam o site) — PRIMEIRO
+> STATUS: Fases 1 e 2 EXECUTADAS em 20/07/2026 (detalhes no CLAUDE.md).
+> Próximas: Fase 3 (esquina, CA na consulta, PDF diagramado) e Fase 4
+> (CINDACTA — aguardando dados do Arthur; estrutura já vista no IBED 2295519).
+
+## Fase 1 — Confiança (bugs que queimam o site) — FEITA
 1. **Bug do índice cadastral** (2 últimos dígitos divergem entre o que o
    site devolve e o que a informação básica dá). Arthur tem exemplo
    concreto — reproduzir com ele. Hipótese inicial: os 2 últimos dígitos
@@ -19,7 +23,7 @@ antes de feature** — "melhor mostrar 'indisponível' do que informação errad
    resposta conhecida (conferidos contra a informação básica do SIURBE) e
    acusa divergência. Vira gate pra qualquer mudança futura no motor.
 
-## Fase 2 — Transparência (origem de cada dado)
+## Fase 2 — Transparência (origem de cada dado) — FEITA
 4. **Origem por campo na ficha**: cada dado com fonte (camada BHMAP /
    IPTU / derivado) — pode ser tooltip/ícone pequeno pra não poluir.
 5. **Data da edificação**: mostrar a origem; quando NÃO há registro,
