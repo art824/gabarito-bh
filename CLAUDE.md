@@ -615,6 +615,14 @@ Carmelo 93) como referência de conferência:
   por seção, preto no branco. ARMADILHA resolvida: `<details>` fechado NÃO
   revela conteúdo só escondendo o summary no CSS — JS `beforeprint` abre
   todos os details e `afterprint` restaura (script.js 4e).
+  BUG REAL (PDF saía EM BRANCO, achado pelo Arthur testando): o `@media
+  print` escondia `.consulta-topo` inteiro — mas `<article class="ficha">`
+  mora DENTRO dessa div, então `display:none` no container matava a ficha
+  toda. Fix: esconder só os filhos (`.consulta-topo > h1`, `> p`), nunca o
+  container. LIÇÃO: print CSS não dá pra validar "no olho" na tela — para
+  testar de verdade, copiar as regras do `@media print` (percorrendo
+  `document.styleSheets` → `CSSRule.MEDIA_RULE` com conditionText 'print')
+  para um `<style>` aplicado à tela e medir se `.ficha` continua visível.
 
 ## Roteiro
 - Fase 1.5 (ATUAL): geocodificação endereço→lat/lon + bateria de testes com os

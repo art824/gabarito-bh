@@ -1043,8 +1043,10 @@ input[type="range"]::-moz-range-thumb {
 @media print {
   @page { size: A4; margin: 14mm 14mm 16mm; }
 
-  /* fora do documento: navegação, busca, controles, elementos interativos */
-  nav, footer, .consulta-topo, .modos, .caixa-busca,
+  /* fora do documento: navegação, busca, controles, elementos interativos.
+     ATENÇÃO: NÃO esconder .consulta-topo — a <article class="ficha"> mora
+     DENTRO dele; escondê-lo deixa o PDF em branco. Esconder só os filhos. */
+  nav, footer, .consulta-topo > h1, .consulta-topo > p, .modos, .caixa-busca,
   .erro, .skeleton-ficha, .modal-fundo,
   .btn-exportar, .ficha-rodape-export, .botao-cel, .botao-inline,
   .report-btn, .reportar-popover, .info-btn, .info-popover,
