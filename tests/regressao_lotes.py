@@ -38,6 +38,14 @@ CASOS = [
         "area_ctm_aprox": (1000.0, 0.05),
     },
     {
+        "nome": "Esquina Conselheiro Saraiva × Contria — 2 testadas LOCAL (AF 3m cada)",
+        "latlon": (-19.931656, -43.969709),
+        "esperado": {
+            "lote_real.geometria_complexa": False,
+        },
+        "n_testadas": 2,  # verificação especial: lote de esquina tem exatamente 2 frentes
+    },
+    {
         "nome": "Praça da Liberdade — logradouro público (zoneamento OP-3 + ADE Contorno)",
         "latlon": (-19.9319, -43.9377),
         "esperado": {
@@ -84,6 +92,14 @@ def main():
             print(f"  [{status}] {nome} :: {caminho} = {obtido!r}" + ("" if ok else f" (esperado {esperado!r})"))
             if not ok:
                 falhas.append((nome, caminho, esperado, obtido))
+
+        if "n_testadas" in caso:
+            testadas = (res.get("lote_real") or {}).get("testadas") or []
+            ok = len(testadas) == caso["n_testadas"]
+            status = "ok  " if ok else "FALHA"
+            print(f"  [{status}] {nome} :: nº de testadas = {len(testadas)} (esperado {caso['n_testadas']})")
+            if not ok:
+                falhas.append((nome, "n_testadas", caso["n_testadas"], len(testadas)))
 
         if "area_ctm_aprox" in caso:
             alvo, tol = caso["area_ctm_aprox"]

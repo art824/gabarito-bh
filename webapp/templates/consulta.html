@@ -195,7 +195,7 @@
       {% endif %}
 
       <details class="fsec-fontes">
-        <summary>Fontes deste bloco</summary>
+        <summary><span class="fsec-fontes-btn">De onde vêm estes dados?</span></summary>
         <ul>
           <li><b>Índice cadastral, endereço, CEP, infraestrutura e edificação</b> — Cadastro Imobiliário do IPTU (BHMAP).</li>
           <li><b>Setor / Quadra / Lote CTM</b> — derivados do código NULOTCTM do Cadastro Técnico Municipal (padrão 2+5+5 dígitos).</li>
@@ -234,7 +234,17 @@
         <div class="cel"><span class="k">Centralidade Local</span><span class="v">{{ 'Sim' if resultado.lote_real.centralidade_local else 'Não' }}</span></div>
         <div class="cel"><span class="k">Conexão Verde</span><span class="v">{{ 'Sim' if resultado.lote_real.conexao_verde else 'Não' }}</span></div>
         {% endif %}
-        {% if resultado.via_mais_proxima %}
+        {% if frentes %}
+        {# Lote de esquina: as duas (ou mais) ruas com igual destaque, AF de cada #}
+        <div class="cel cel-full lote-esquina-tag"><span class="k">Lote de esquina · {{ frentes|length }} frentes</span></div>
+        {% for fr in frentes %}
+        <div class="cel cel-3">
+          <span class="k">Frente {{ loop.index }} · {{ fr.rua }}</span>
+          <span class="v">{{ fr.classificacao }}{% if fr.af is not none %} · afastamento frontal {{ '%g'|format(fr.af) }} m{% else %} · sem exigência de afastamento{% endif %}</span>
+          <span class="sub">{{ fr.faixa_largura }} · testada de {{ '%g'|format(fr.comprimento_m) }} m</span>
+        </div>
+        {% endfor %}
+        {% elif resultado.via_mais_proxima %}
         <div class="cel {{ 'cel-2' if resultado.lote_real else 'cel-full' }}">
           <span class="k">Via do lote (provável)</span>
           <span class="v">{{ resultado.via_mais_proxima.nome }}</span>
@@ -244,14 +254,16 @@
       </div>
 
       <details class="fsec-fontes">
-        <summary>Fontes deste bloco</summary>
+        <summary><span class="fsec-fontes-btn">De onde vêm estes dados?</span></summary>
         <ul>
           <li><b>Zoneamento</b> — camada Zoneamento do BHMAP (Anexo I), por ponto-em-polígono.</li>
           <li><b>ADEs incidentes{% if resultado.ade_setor_nome %} e setor{% endif %}</b> — camada{% if resultado.ade_setor_nome %}s{% endif %} ADE{% if resultado.ade_setor_nome %} + Setores de ADE{% endif %} do BHMAP, por ponto-em-polígono.</li>
           {% if resultado.lote_real %}
           <li><b>Centralidade Local · Conexão Verde</b> — camadas homônimas do BHMAP, por ponto-em-polígono.</li>
           {% endif %}
-          {% if resultado.via_mais_proxima %}
+          {% if frentes %}
+          <li><b>Frentes do lote (esquina)</b> — cada rua confrontante identificada pelo Gabarito cruzando o polígono do lote (CTM) com a Classificação Viária do BHMAP; o afastamento frontal de cada uma vem do Anexo XII, pela classificação da respectiva via.</li>
+          {% elif resultado.via_mais_proxima %}
           <li><b>Via do lote</b> — camada Classificação Viária do BHMAP; é a via mais próxima do ponto (a {{ resultado.via_mais_proxima.distancia_m }} m), não confirmada como testada.</li>
           {% endif %}
         </ul>
@@ -278,9 +290,14 @@
         {% endif %}
         {% endif %}
 
-        <div class="cel">
+        <div class="cel {{ 'cel-2' if frentes else '' }}">
           <span class="k">Afastamento frontal</span>
+          {% if frentes %}
+          <span class="v">{% for fr in frentes %}{{ fr.rua }}: {% if fr.af is not none %}{{ '%g'|format(fr.af) }} m{% else %}sem exigência{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</span>
+          <span class="sub">Lote de esquina — cada frente tem seu afastamento.</span>
+          {% else %}
           <span class="v vnum">{{ f.afastamento_frontal_m }}{% if f.afastamento_frontal_m is number %} <i>m</i>{% endif %}</span>
+          {% endif %}
         </div>
         {% if amd_valor is not none %}
         <div class="cel">
@@ -310,7 +327,7 @@
       </div>
 
       <details class="fsec-fontes">
-        <summary>Fontes deste bloco</summary>
+        <summary><span class="fsec-fontes-btn">De onde vêm estes dados?</span></summary>
         <ul>
           <li><b>Coeficientes de aproveitamento e quota</b> — Lei 11.181/19, Anexo XII, tabela 10, pela sigla {{ resultado.zoneamento.sigla }}.</li>
           <li><b>Afastamento frontal</b> — Anexo XII (afastamento frontal por classificação da via: {{ resultado.via_mais_proxima.classificacao if resultado.via_mais_proxima else '—' }}).</li>
@@ -327,6 +344,70 @@
         </ul>
       </details>
     </section>
+
+    {% if estudo and estudo.ca_bas is not none %}
+    {% set ns.sec = ns.sec + 1 %}
+    <section class="fsec fsec-potencial" id="potencial-construtivo">
+      <header class="fsec-cab">
+        <span class="num">0{{ ns.sec }}</span>
+        <h3>Potencial construtivo</h3>
+        <span class="fonte mono">Quanto dá pra construir</span>
+      </header>
+
+      <div class="potencial-corpo"
+           data-cabas="{{ estudo.ca_bas }}"
+           data-camax="{{ estudo.ca_max if estudo.ca_max is not none else '' }}"
+           data-quota="{{ estudo.quota if estudo.quota is not none else '' }}"
+           data-quota-sem-limite="{{ '1' if estudo.quota_sem_limite else '' }}"
+           data-area-real="{{ estudo.area_real if estudo.area_real is not none else '' }}">
+
+        <div class="pot-controle">
+          <label for="pot-area">Área do terreno</label>
+          <output id="pot-area-out">—</output>
+          {% if estudo.area_real is not none %}
+          <button type="button" class="pot-reset" id="pot-reset" title="Voltar à área real do lote">↺ área real</button>
+          {% endif %}
+        </div>
+        <input type="range" id="pot-area" min="50" max="5000" step="10"
+               value="{{ estudo.area_real|round(0, 'floor')|int if estudo.area_real is not none else 360 }}">
+
+        <div class="pot-cards">
+          <div class="pot-card">
+            <span class="pot-k">Coeficiente básico</span>
+            <b class="pot-v">{{ '%g'|format(estudo.ca_bas) }}×</b>
+            <span class="pot-detalhe" id="pot-bas">—</span>
+            <span class="pot-nota">sem contrapartida</span>
+          </div>
+          {% if estudo.ca_max is not none and estudo.ca_max > estudo.ca_bas %}
+          <div class="pot-card pot-card-destaque">
+            <span class="pot-k">Coeficiente máximo</span>
+            <b class="pot-v">{{ '%g'|format(estudo.ca_max) }}×</b>
+            <span class="pot-detalhe" id="pot-max">—</span>
+            <span class="pot-nota">com outorga onerosa</span>
+          </div>
+          {% endif %}
+          <div class="pot-card">
+            <span class="pot-k">Unidades máx.</span>
+            <b class="pot-v" id="pot-un">—</b>
+            <span class="pot-nota">{% if estudo.quota_sem_limite %}sem limite de quota nesta zona{% elif estudo.quota is not none %}quota {{ '%g'|format(estudo.quota) }} m²/unidade{% else %}quota não definida{% endif %}</span>
+          </div>
+        </div>
+
+        <p class="pot-aviso">Potencial teórico pela área e pelo coeficiente da zona. O que cabe de fato depende de afastamentos, permeabilidade e altura — veja no estudo interativo abaixo.</p>
+      </div>
+
+      <details class="fsec-fontes">
+        <summary><span class="fsec-fontes-btn">De onde vêm estes dados?</span></summary>
+        <ul>
+          <li><b>Coeficientes e quota</b> — Lei 11.181/19, Anexo XII, tabela 10, pela sigla {{ resultado.zoneamento.sigla }}.</li>
+          {% if estudo.area_real is not none %}
+          <li><b>Área inicial</b> — área oficial do lote no CTM ({{ '%g'|format(estudo.area_real) }} m²); o slider permite simular outras áreas.</li>
+          {% endif %}
+          <li><b>Cálculo</b> — potencial = área × coeficiente; unidades = potencial básico ÷ quota (contas do próprio Gabarito).</li>
+        </ul>
+      </details>
+    </section>
+    {% endif %}
 
     {% if estudo %}
     {% set ns.sec = ns.sec + 1 %}

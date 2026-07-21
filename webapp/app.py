@@ -98,6 +98,33 @@ def _resolver_af_regra_geral(classe_via: str) -> float | None:
     return valor if isinstance(valor, (int, float)) else None
 
 
+def _montar_frentes(res: dict) -> list | None:
+    """Lotes de esquina: cada rua confrontante é uma FRENTE, com seu próprio
+    afastamento frontal (a classificação da via pode diferir entre as ruas).
+    Só retorna quando há 2 testadas legítimas (esquina); lote de 1 rua já é
+    coberto por via_mais_proxima, e 3+ ruas viram geometria_complexa. Pedido
+    da K2: as duas ruas têm igual importância, não uma 'principal' e outra
+    'provável' de canto."""
+    lote = res.get("lote_real")
+    if not lote or lote.get("geometria_complexa"):
+        return None
+    testadas = lote.get("testadas") or []
+    if len(testadas) < 2:
+        return None
+    frentes = []
+    for t in testadas:
+        classe = t.get("classificacao")
+        af = _resolver_af_regra_geral(classe)
+        frentes.append({
+            "rua": t.get("rua"),
+            "classificacao": classe,
+            "faixa_largura": t.get("faixa_largura"),
+            "comprimento_m": t.get("comprimento_m"),
+            "af": af,
+        })
+    return frentes
+
+
 def _num(v):
     """Converte para float se der; senão None (nunca inventa valor)."""
     try:
@@ -374,7 +401,7 @@ def consulta_page():
         "resultado": None, "erro": None, "endereco": "", "indice_cadastral": "",
         "modo": "endereco",
         "rotulos_ca": ROTULOS_CA, "amd_valor": None,
-        "estudo": None, "identificacao": None, "veredito": None,
+        "estudo": None, "identificacao": None, "veredito": None, "frentes": None,
     }
     if request.method == "GET":
         return render_template("consulta.html", **contexto)
@@ -464,6 +491,7 @@ def consulta_page():
         indice_consultado=contexto["indice_cadastral"] if modo == "indice" else None,
     )
     contexto["veredito"] = _montar_veredito(res)
+    contexto["frentes"] = _montar_frentes(res)
     for exc in ficha.get("excecoes_incidentes", []):
         exc["regra"] = _texto_regra(exc["regra"])
     return render_template("consulta.html", **contexto)
