@@ -193,6 +193,24 @@
     reveals.forEach(function (el) { el.classList.add("visivel"); });
   }, 2500);
 
+  /* ---------- 4e. PDF: abrir todos os <details> ao imprimir ----------
+     Um <details> fechado não revela o conteúdo só escondendo o summary no
+     CSS — o navegador o mantém colapsado. Então abrimos todos antes de
+     imprimir (fontes, "ver o que foi verificado") e restauramos depois. */
+  (function () {
+    var estadoDetails = [];
+    window.addEventListener("beforeprint", function () {
+      estadoDetails = [];
+      document.querySelectorAll("details").forEach(function (d) {
+        estadoDetails.push([d, d.open]);
+        d.open = true;
+      });
+    });
+    window.addEventListener("afterprint", function () {
+      estadoDetails.forEach(function (par) { par[0].open = par[1]; });
+    });
+  })();
+
   /* ---------- 5. Potencial construtivo na consulta (slider de área) ----------
      Bloco destacado pedido pela K2 ("o que corretores mais querem ver"):
      zona já conhecida, slider de área partindo da área real do lote. */

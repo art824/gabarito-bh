@@ -61,6 +61,18 @@
   {% set ns = namespace(sec=0) %}
   <article class="ficha">
 
+    <!-- cabeçalho que só aparece na impressão/PDF -->
+    <div class="print-cabecalho somente-print">
+      <div class="print-marca">
+        <span class="print-logo">Gabarito<span class="print-bh">BH</span></span>
+        <span class="print-sub">Ficha urbanística · Lei 11.181/19 — Plano Diretor de Belo Horizonte</span>
+      </div>
+      <div class="print-meta">
+        <span>Emitida em {{ data_emissao }}</span>
+        <span>gabaritoarq.com.br</span>
+      </div>
+    </div>
+
     <div class="carimbo">
       <div>
         <span class="k">Documento</span>

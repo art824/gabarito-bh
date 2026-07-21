@@ -10,6 +10,7 @@ Uso:
 import json
 import re
 import sys
+from datetime import date
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent.parent
@@ -402,6 +403,7 @@ def consulta_page():
         "modo": "endereco",
         "rotulos_ca": ROTULOS_CA, "amd_valor": None,
         "estudo": None, "identificacao": None, "veredito": None, "frentes": None,
+        "data_emissao": date.today().strftime("%d/%m/%Y"),
     }
     if request.method == "GET":
         return render_template("consulta.html", **contexto)

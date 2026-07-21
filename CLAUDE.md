@@ -570,6 +570,46 @@ Carmelo 93) como referência de conferência:
   terreno (800m), altura máxima = diferença (29m). Guardar PDFs de IBED
   que o Arthur trouxer — são gabarito de conferência E fonte de estrutura.
 
+## FEITO (07/2026) — Fase 3 do plano + refino de UX da consulta
+- **UX das fontes**: as origens por CÉLULA (v. Fase 2) poluíam demais.
+  Trocadas por um `<details class="fsec-fontes">` colapsável POR SEÇÃO
+  (rodapé de cada bloco), com aparência clara de botão clicável (pílula
+  terra `.fsec-fontes-btn`, ícone ⓘ e +/−). Macro `origem()` removida.
+  DOUBLE-CHECK das fontes contra o código (pedido do Arthur "não quero
+  chute"): corrigido rótulo da Área CTM (é o campo oficial AREA_M2 do CTM,
+  não "calculada do polígono"); testada é que é calculada por nós; não
+  cravar número de tabela do AF frontal (o JSON não declara — evita chute).
+- **Veredito "pode construir?" reposicionado**: agora é a PRIMEIRA coisa da
+  ficha (antes da seção 01), caixa VERDE com selo (`_montar_veredito` ganhou
+  estado/titulo/subtitulo). Enxuto no topo; detalhe (verificado/atenções/não
+  verificado) num `<details>` "Ver o que foi verificado". Nunca diz "não
+  pode" sem base (fora de zoneamento já barra antes).
+- **Skeleton de carregamento**: `#skeleton-carregando` aparece no submit da
+  busca (o POST recarrega a página; o esqueleto fica visível enquanto o
+  servidor responde — crítico no cold-start do Render de 30-60s). Restaura
+  sozinho quando a nova página chega.
+- **Lotes de esquina (Fase 3 item 7)**: `_montar_frentes(res)` expõe cada
+  rua confrontante como FRENTE com seu próprio AF (só quando há 2 testadas;
+  3+ = geometria_complexa). Ficha mostra "Frente 1/2" com AF de cada, e o AF
+  na seção Parâmetros vira "Rua X: 3 m · Rua Y: 3 m". O anexo interativo JÁ
+  desenhava/rotulava cada testada (nativo da v4). Caso de regressão travado:
+  esquina Conselheiro Saraiva × Contria (lat -19.931656, lon -43.969709).
+- **Potencial construtivo na consulta (Fase 3 item 8, pedido K2)**: seção
+  própria `#potencial-construtivo` (antes do estudo interativo) com slider
+  de ÁREA partindo da área real do lote, mostrando m² CA básico/máximo e
+  unidades pela quota ao vivo (JS lê data-* do `.potencial-corpo`; zona já
+  conhecida, não precisa escolher). Botão "↺ área real" reseta.
+- **PDF diagramado (Fase 3 item 9)**: DECISÃO — CSS de impressão dedicado,
+  NÃO server-side (WeasyPrint exigiria libs de sistema cairo/pango que
+  complicariam o deploy no Render, que já foi difícil; print CSS entrega a
+  cara profissional sem risco). `@media print` consolidado (havia 2 blocos
+  velhos com classes órfãs): cabeçalho de documento `.print-cabecalho`
+  (`.somente-print`, com data de emissão vinda do servidor via
+  `data_emissao`), esconde tudo interativo/navegação, `break-inside: avoid`
+  por seção, preto no branco. ARMADILHA resolvida: `<details>` fechado NÃO
+  revela conteúdo só escondendo o summary no CSS — JS `beforeprint` abre
+  todos os details e `afterprint` restaura (script.js 4e).
+
 ## Roteiro
 - Fase 1.5 (ATUAL): geocodificação endereço→lat/lon + bateria de testes com os
   endereços de resposta conhecida do Arthur. GATE: só ir p/ fase 2 se bater.

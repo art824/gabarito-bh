@@ -4,9 +4,10 @@ Origem: entrevistas com K2 Arquitetura (mercado/profissional) e Soluz
 (estudante). Princípio que atravessa tudo, dito pela K2: **confiabilidade
 antes de feature** — "melhor mostrar 'indisponível' do que informação errada".
 
-> STATUS: Fases 1 e 2 EXECUTADAS em 20/07/2026 (detalhes no CLAUDE.md).
-> Próximas: Fase 3 (esquina, CA na consulta, PDF diagramado) e Fase 4
-> (CINDACTA — aguardando dados do Arthur; estrutura já vista no IBED 2295519).
+> STATUS: Fases 1, 2 e 3 EXECUTADAS em 20/07/2026 (detalhes no CLAUDE.md).
+> Próxima: Fase 4 (CINDACTA — aguardando dados do Arthur; estrutura já
+> vista no IBED 2295519). Fase 5 (dados novos + DWG por zona) e Fase 6
+> (acadêmico/monetização) seguem pendentes.
 
 ## Fase 1 — Confiança (bugs que queimam o site) — FEITA
 1. **Bug do índice cadastral** (2 últimos dígitos divergem entre o que o
@@ -34,7 +35,7 @@ antes de feature** — "melhor mostrar 'indisponível' do que informação errad
    corretores): logo após um scroll, resposta direta "pode construir" /
    "não pode construir por X", sempre com a origem da informação.
 
-## Fase 3 — Produto (quick wins pedidos)
+## Fase 3 — Produto (quick wins pedidos) — FEITA
 7. **Lotes de esquina**: as DUAS ruas com igual destaque na ficha (hoje a
    segunda fica como "provável", de canto) e no anexo interativo; quando
    não der pra desenhar direito, disclaimer em vez de desenho errado.

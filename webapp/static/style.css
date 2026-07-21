@@ -1033,21 +1033,91 @@ input[type="range"]::-moz-range-thumb {
 .modal-fechar:hover { color: var(--terra); }
 
 /* ---------- impressão (export em PDF via imprimir) ---------- */
+/* elemento que só aparece no PDF/impressão */
+.somente-print { display: none; }
+
+/* ============================================================
+   IMPRESSÃO / PDF — a ficha vira um documento diagramado.
+   Objetivo: cara de relatório profissional (base do export pago).
+   ============================================================ */
 @media print {
-  nav, footer, .modos, .caixa-busca, .consulta-topo > p,
-  .erro, .modal-fundo, #btn-exportar, .bloco-estudo .estudo-calc input[type="range"],
-  .rotulo-h { display: none !important; }
-  body { background: #fff; }
-  .container { max-width: none; padding: 0; }
-  .ficha { box-shadow: none; margin-top: 8px; }
-  .consulta-topo { padding: 0; }
-  .consulta-topo h1 { font-size: 22px; }
-  .bloco-estudo { background: #fff; }
-  .bloco-estudo .estudo-calc { color: var(--tinta); }
-  .bloco-estudo .estudo-saidas > div { background: #fff; }
-  .bloco-estudo .estudo-saidas .k, .bloco-estudo .estudo-saidas b,
-  .bloco-estudo .estudo-nota, .bloco-estudo .estudo-area-out .k,
-  .bloco-estudo .estudo-area-out b { color: var(--tinta); }
+  @page { size: A4; margin: 14mm 14mm 16mm; }
+
+  /* fora do documento: navegação, busca, controles, elementos interativos */
+  nav, footer, .consulta-topo, .modos, .caixa-busca,
+  .erro, .skeleton-ficha, .modal-fundo,
+  .btn-exportar, .ficha-rodape-export, .botao-cel, .botao-inline,
+  .report-btn, .reportar-popover, .info-btn, .info-popover,
+  .pot-reset, #pot-area,
+  .estudo-desenho, .controle-h, .afastamento-lateral-destaque,
+  .fsec-estudo .estudo-painel .painel-grupo:last-of-type,
+  input[type="range"] {
+    display: none !important;
+  }
+
+  html, body {
+    background: #fff !important; color: #000;
+    background-image: none !important;
+  }
+  .container { max-width: none; padding: 0; margin: 0; }
+
+  /* o milimetrado de fundo e sombras somem no papel */
+  body::before, body::after { display: none !important; }
+  * { box-shadow: none !important; }
+
+  .ficha { margin: 0; border: none; }
+
+  /* cabeçalho do documento */
+  .somente-print { display: block; }
+  .print-cabecalho {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-bottom: 2.5px solid #000; padding-bottom: 8px; margin-bottom: 14px;
+  }
+  .print-logo {
+    font-family: var(--serif, 'Fraunces', serif);
+    font-size: 22px; font-weight: 700; color: #000;
+  }
+  .print-bh {
+    font-size: 12px; vertical-align: super; margin-left: 2px; color: var(--terra);
+  }
+  .print-sub { display: block; font-size: 10px; color: #333; margin-top: 2px; }
+  .print-meta {
+    text-align: right; font-family: var(--mono);
+    font-size: 9.5px; color: #333; line-height: 1.6;
+  }
+  .print-meta span { display: block; }
+
+  /* cada seção é uma unidade que não quebra no meio da página */
+  .fsec, .veredito, .carimbo, .bloco-excecoes, .bloco-alertas,
+  .bloco-fontes, .subcard-titulo, .celulas, .pot-cards {
+    break-inside: avoid; page-break-inside: avoid;
+  }
+  .fsec { margin: 0 0 14px; }
+  .fsec-cab h3 { font-size: 15px; }
+
+  /* veredito: mantém o realce mas em tom sóbrio de papel */
+  .veredito { border-width: 1.5px; margin: 0 0 14px; }
+  .veredito-sim { background: #F0F5F1 !important; }
+  .veredito-atencao, .veredito-restrito { background: #F7F1EB !important; }
+
+  /* details (fontes + "ver o que foi verificado"): SEMPRE expandidos no PDF,
+     escondendo o botão de toggle */
+  details { display: block !important; }
+  details > summary { display: none !important; }
+  .fsec-fontes { border-top: 1px solid #999; }
+  .veredito-mais { margin-top: 8px; }
+
+  /* garante que os valores apareçam em preto (não em cinza claro) */
+  .v, .pot-v, .pot-detalhe, .veredito-titulo { color: #000 !important; }
+
+  /* o potencial construtivo vira uma leitura estática dos 3 cards */
+  #pot-area-out { font-size: 15px; }
+
+  /* rodapé de aviso legal fica visível e ao pé */
+  .ficha-rodape {
+    border-top: 1.5px solid #000; margin-top: 10px;
+    font-size: 9px; color: #333;
+  }
 }
 
 /* botão de exportar duplicado no fim da ficha */
@@ -1516,11 +1586,6 @@ input[type="range"]::-moz-range-thumb {
 .dims-manuais .dims-area b { font-family: var(--serif); font-size: 18px; color: var(--tinta); }
 
 /* impressão: esconder controles do estudo v3 */
-@media print {
-  input[type="range"] { display: none !important; }
-  .fsec-estudo .controle-h-topo output { color: var(--tinta); }
-}
-
 /* mobile */
 @media (max-width: 760px) {
   .fsec { margin: 24px 14px; }
