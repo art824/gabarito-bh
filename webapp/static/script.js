@@ -594,6 +594,31 @@
     });
   }
 
+  /* ---------- 6c. Estado de carregamento no submit da busca ----------
+     O POST recarrega a página; o esqueleto fica visível na página atual
+     enquanto o servidor responde (essencial no cold-start do Render). */
+  var formBusca = document.getElementById("form-busca");
+  var skeleton = document.getElementById("skeleton-carregando");
+  if (formBusca && skeleton) {
+    formBusca.addEventListener("submit", function (e) {
+      var modo = document.getElementById("campo-modo").value;
+      var campo = modo === "indice"
+        ? document.getElementById("campo-indice")
+        : document.getElementById("campo-endereco");
+      if (!campo || !campo.value.trim()) return;  // deixa o navegador validar vazio
+      // esconde ficha/erro antigos e mostra o esqueleto
+      var fichaAntiga = document.querySelector(".ficha");
+      if (fichaAntiga) fichaAntiga.style.display = "none";
+      var erroAntigo = document.querySelector(".erro");
+      if (erroAntigo) erroAntigo.style.display = "none";
+      skeleton.hidden = false;
+      skeleton.setAttribute("aria-hidden", "false");
+      skeleton.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      var btn = formBusca.querySelector('button[type="submit"]');
+      if (btn) { btn.disabled = true; btn.textContent = "Consultando…"; }
+    });
+  }
+
   /* ---------- 4c. Carrossel "A ficha" — cicla sozinho, clique assume ---------- */
   var fcEl = document.getElementById("ficha-carrossel");
   if (fcEl) {

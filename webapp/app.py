@@ -272,13 +272,16 @@ def _montar_identificacao(res: dict, extras: dict, indice_consultado: str | None
 
 def _montar_veredito(res: dict) -> dict | None:
     """Síntese "pode construir?" pro topo da ficha (pedido da K2, pensando em
-    corretores). REGRA DE OURO: nunca afirmar além do que as bases mostram —
-    o veredito diz o que foi verificado, o que pede atenção e o que NÃO foi
-    verificado, sempre com origem."""
+    corretores). É a PRIMEIRA coisa da ficha. REGRA DE OURO: nunca afirmar
+    além do que as bases mostram — nunca dizemos "não pode" a menos que
+    realmente não haja parâmetro construtivo; caso contrário é "sim, com o
+    que verificar". O detalhe (verificado/atenções/não verificado) fica no
+    corpo do bloco, colapsável."""
     if not res.get("zoneamento"):
         return None
     ficha = res.get("ficha", {})
     ca = ficha.get("coef_aproveitamento") or {}
+    sigla = res["zoneamento"]["sigla"]
 
     def _pct(txt):
         m = re.match(r"\s*(\d+(?:[.,]\d+)?)\s*%", str(txt or ""))
@@ -286,44 +289,64 @@ def _montar_veredito(res: dict) -> dict | None:
 
     to_pct = _pct(ficha.get("taxa_ocupacao_max"))
     tp_pct = _pct(ficha.get("taxa_permeabilidade_min"))
+    ca_bas = _num(ca.get("ca_bas"))
+    ca_max = _num(ca.get("ca_max"))
 
     atencoes = []
-    if to_pct is not None and to_pct <= 10:
+    muito_restritivo = to_pct is not None and to_pct <= 10
+    if muito_restritivo:
         atencoes.append(
-            f"Parâmetros muito restritivos nesta zona: ocupação máxima de {to_pct:g}% "
-            f"do terreno (camada de TP/TO do BHMAP)."
+            f"Zona de ocupação muito restritiva: ocupação máxima de apenas {to_pct:g}% "
+            f"do terreno (camada de Taxa de Permeabilidade do BHMAP)."
         )
     if res.get("ades"):
         atencoes.append(
-            "Lote dentro de ADE (" + ", ".join(res["ades"]) + ") — exceções da ADE "
-            "prevalecem sobre a regra geral; confira as exceções na ficha."
+            "Lote em ADE (" + ", ".join(res["ades"]) + ") — as exceções da ADE "
+            "prevalecem sobre a regra geral; confira o bloco de exceções abaixo."
         )
     for alerta in res.get("alertas", []):
         if "não verificad" not in alerta:
             atencoes.append(alerta)
 
     nao_verificado = [
-        "Altura máxima de aeródromo (CINDACTA/DECEA)",
+        "Altura máxima por aeródromo (CINDACTA/DECEA)",
         "Área de Preservação Permanente (APP) e meio ambiente",
-        "Patrimônio cultural (proteções e tombamentos)",
+        "Patrimônio cultural (tombamentos e proteção)",
     ]
     nao_verificado += [a.rstrip(".") for a in res.get("alertas", []) if "não verificad" in a]
 
-    ca_bas = ca.get("ca_bas")
     verificado = []
     if ca_bas is not None:
-        verificado.append(
-            f"O zoneamento ({res['zoneamento']['sigla']}) permite construir — "
-            f"coeficiente básico {ca_bas:g} (até {ca_bas:g}× a área do terreno, "
-            f"sem contrapartida). Fonte: Anexo XII, t.10."
-        )
+        detalhe_ca = f"até {ca_bas:g}× a área do terreno no coeficiente básico"
+        if ca_max is not None and ca_max > ca_bas:
+            detalhe_ca += f", {ca_max:g}× no máximo (com contrapartida)"
+        verificado.append(f"Coeficiente de aproveitamento: {detalhe_ca}.")
     if to_pct is not None and tp_pct is not None:
         verificado.append(
-            f"Ocupação máxima de {to_pct:g}% e permeabilidade mínima de {tp_pct:g}% "
-            f"do terreno. Fonte: camada TP/TO do BHMAP + t.11."
+            f"Ocupação máxima de {to_pct:g}% e permeabilidade mínima de {tp_pct:g}% do terreno."
         )
 
-    return {"verificado": verificado, "atencoes": atencoes, "nao_verificado": nao_verificado}
+    # Estado principal — verde quando há parâmetro construtivo e a zona não é
+    # de ocupação mínima; terra quando há atenção relevante. Nunca "não pode"
+    # sem base (fora de zoneamento já é barrado antes de chegar aqui).
+    pode = ca_bas is not None and ca_bas > 0
+    if pode and not muito_restritivo:
+        estado = "sim"
+        titulo = "Pode construir"
+        subtitulo = f"Zoneamento {sigla} permite construção."
+    elif pode:
+        estado = "atencao"
+        titulo = "Pode construir, com forte restrição"
+        subtitulo = f"Zoneamento {sigla}, mas a ocupação máxima é baixa — confira abaixo."
+    else:
+        estado = "restrito"
+        titulo = "Construção sujeita a análise"
+        subtitulo = f"Zoneamento {sigla} não define coeficiente básico direto — confira as exceções."
+
+    return {
+        "estado": estado, "titulo": titulo, "subtitulo": subtitulo,
+        "verificado": verificado, "atencoes": atencoes, "nao_verificado": nao_verificado,
+    }
 
 
 def _texto_regra(regra) -> str:

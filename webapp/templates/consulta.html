@@ -2,9 +2,6 @@
 
 {% block titulo %}Consultar lote — Gabarito{% endblock %}
 
-{# Tag de origem do dado — transparência pedida pela K2: cada informação diz de onde veio #}
-{% macro origem(txt) %}<span class="origem mono">{{ txt }}</span>{% endmacro %}
-
 {% block conteudo %}
 
 <div class="container consulta-topo">
@@ -36,6 +33,26 @@
     </p>
   </div>
 
+  <!-- esqueleto de carregamento: aparece no submit (o POST recarrega a página;
+       o esqueleto fica visível enquanto o servidor processa — importante no
+       cold-start do Render, que pode levar 30-60s). -->
+  <div class="skeleton-ficha" id="skeleton-carregando" hidden aria-hidden="true">
+    <p class="skeleton-msg">Consultando o lote nas bases oficiais…</p>
+    <div class="sk-carimbo">
+      <span class="sk sk-linha" style="width:38%"></span>
+      <span class="sk sk-linha" style="width:22%"></span>
+    </div>
+    <div class="sk-bloco">
+      <span class="sk sk-cel"></span><span class="sk sk-cel"></span>
+      <span class="sk sk-cel"></span><span class="sk sk-cel"></span>
+      <span class="sk sk-cel"></span><span class="sk sk-cel"></span>
+    </div>
+    <div class="sk-bloco">
+      <span class="sk sk-cel"></span><span class="sk sk-cel"></span>
+      <span class="sk sk-cel"></span><span class="sk sk-cel"></span>
+    </div>
+  </div>
+
   {% if erro %}
   <div class="erro">{{ erro }}</div>
   {% endif %}
@@ -63,6 +80,32 @@
     {% if resultado.zoneamento %}
     {% set f = resultado.ficha %}
 
+    {% if veredito %}
+    <div class="veredito veredito-{{ veredito.estado }}">
+      <div class="veredito-topo">
+        <span class="veredito-selo">{{ '✓' if veredito.estado == 'sim' else '!' }}</span>
+        <div>
+          <p class="veredito-titulo">{{ veredito.titulo }}</p>
+          <p class="veredito-sub">{{ veredito.subtitulo }}</p>
+        </div>
+      </div>
+      <details class="veredito-mais">
+        <summary>Ver o que foi verificado e o que não foi</summary>
+        <div class="veredito-corpo">
+          {% for v in veredito.verificado %}
+          <p class="veredito-ok">✓ {{ v }}</p>
+          {% endfor %}
+          {% for a in veredito.atencoes %}
+          <p class="vd-item-atencao">⚠ {{ a }}</p>
+          {% endfor %}
+          {% if veredito.nao_verificado %}
+          <p class="veredito-nv"><b>Não verificado por esta ficha:</b> {{ veredito.nao_verificado|join(' · ') }}.</p>
+          {% endif %}
+        </div>
+      </details>
+    </div>
+    {% endif %}
+
     {% if identificacao %}
     {% set ns.sec = ns.sec + 1 %}
     <section class="fsec">
@@ -75,12 +118,10 @@
         <div class="cel cel-3">
           <span class="k">Endereço no IPTU</span>
           <span class="v">{{ identificacao.endereco_iptu }}{% if identificacao.cep %} <span class="sub-inline">· CEP {{ identificacao.cep }}</span>{% endif %}</span>
-          {{ origem('Cadastro Imobiliário do IPTU · BHMAP') }}
         </div>
         {% if resultado.bairro_oficial %}
         <div class="cel {{ 'cel-2' if resultado.bairro_popular and resultado.bairro_popular != resultado.bairro_oficial else 'cel-3' }}">
           <span class="k">Bairro oficial</span><span class="v">{{ resultado.bairro_oficial }}</span>
-          {{ origem('BHMAP · Bairro Oficial') }}
         </div>
         {% endif %}
         {% if resultado.bairro_popular and resultado.bairro_popular != resultado.bairro_oficial %}
@@ -106,13 +147,13 @@
         </div>
         {% endif %}
         {% if identificacao.area_terreno_iptu %}
-        <div class="cel"><span class="k">Área do terreno · IPTU</span><span class="v vnum">{{ '%g'|format(identificacao.area_terreno_iptu) }} <i>m²</i></span>{{ origem('declarada no cadastro do IPTU') }}</div>
+        <div class="cel"><span class="k">Área do terreno · IPTU</span><span class="v vnum">{{ '%g'|format(identificacao.area_terreno_iptu) }} <i>m²</i></span></div>
         {% endif %}
         {% if identificacao.area_ctm %}
-        <div class="cel"><span class="k">Área do terreno · CTM</span><span class="v vnum">{{ '%g'|format(identificacao.area_ctm) }} <i>m²</i></span>{{ origem('calculada do polígono do lote (CTM)') }}</div>
+        <div class="cel"><span class="k">Área do terreno · CTM</span><span class="v vnum">{{ '%g'|format(identificacao.area_ctm) }} <i>m²</i></span></div>
         {% endif %}
         {% if resultado.lote_real and resultado.lote_real.testadas and not resultado.lote_real.geometria_complexa %}
-        <div class="cel"><span class="k">Testada · CTM</span><span class="v vnum">{{ '%g'|format(resultado.lote_real.testadas[0].comprimento_m) }} <i>m</i></span>{{ origem('calculada do polígono do lote (CTM)') }}</div>
+        <div class="cel"><span class="k">Testada · CTM</span><span class="v vnum">{{ '%g'|format(resultado.lote_real.testadas[0].comprimento_m) }} <i>m</i></span></div>
         {% endif %}
         {% if identificacao.divergencia_area %}
         <div class="cel cel-full cel-aviso">⚠ {{ identificacao.divergencia_area }}</div>
@@ -140,8 +181,7 @@
         <div class="cel cel-3"><span class="k">Ano de construção</span><span class="v vnum">{{ identificacao.edificacao.ano_construcao|int if identificacao.edificacao.ano_construcao else '—' }}</span></div>
         <div class="cel cel-3"><span class="k">Área construída</span><span class="v vnum">{% if identificacao.edificacao.area_construcao %}{{ '%g'|format(identificacao.edificacao.area_construcao) }} <i>m²</i>{% else %}—{% endif %}</span></div>
         <div class="cel cel-full">
-          {{ origem('Cadastro Imobiliário do IPTU · dados ' + ('da unidade consultada' if identificacao.unidade_consultada else 'de uma unidade de referência' + (' — o lote tem ' ~ identificacao.n_economias ~ ' unidades cadastradas' if identificacao.n_economias > 1 else '')) ) }}
-          <span class="sub">O cadastro reflete o que foi registrado na Prefeitura — reformas ou construções não averbadas podem não constar.</span>
+          <span class="sub">Dados {{ 'da unidade consultada' if identificacao.unidade_consultada else 'de uma unidade de referência' }}{% if identificacao.n_economias > 1 and not identificacao.unidade_consultada %} — o lote tem {{ identificacao.n_economias }} unidades cadastradas{% endif %}. O cadastro reflete o que foi registrado na Prefeitura — reformas ou construções não averbadas podem não constar.</span>
         </div>
       </div>
       {% else %}
@@ -150,26 +190,24 @@
         <div class="cel cel-full">
           <span class="v vsub">Sem registro de edificação para esta unidade no cadastro do IPTU.</span>
           <span class="sub">Isso NÃO garante que o lote esteja vago: pode existir edificação ainda não registrada ou não averbada na base a que temos acesso. Confira em campo ou na Prefeitura.</span>
-          {{ origem('Cadastro Imobiliário do IPTU · BHMAP') }}
         </div>
       </div>
       {% endif %}
-    </section>
-    {% endif %}
 
-    {% if veredito %}
-    <div class="veredito">
-      <p class="veredito-titulo mono">Síntese — pelas bases consultadas</p>
-      {% for v in veredito.verificado %}
-      <p class="veredito-ok">✓ {{ v }}</p>
-      {% endfor %}
-      {% for a in veredito.atencoes %}
-      <p class="veredito-atencao">⚠ {{ a }}</p>
-      {% endfor %}
-      {% if veredito.nao_verificado %}
-      <p class="veredito-nv"><b>Não verificado por esta ficha:</b> {{ veredito.nao_verificado|join(' · ') }}.</p>
-      {% endif %}
-    </div>
+      <details class="fsec-fontes">
+        <summary>Fontes deste bloco</summary>
+        <ul>
+          <li><b>Índice cadastral, endereço, CEP, infraestrutura e edificação</b> — Cadastro Imobiliário do IPTU (BHMAP).</li>
+          <li><b>Setor / Quadra / Lote CTM</b> — derivados do código NULOTCTM do Cadastro Técnico Municipal (padrão 2+5+5 dígitos).</li>
+          <li><b>Área do terreno · IPTU</b> — valor declarado no Cadastro Imobiliário do IPTU.</li>
+          <li><b>Área do terreno · CTM</b> — campo oficial AREA_M2 do Cadastro Técnico Municipal (calculada pela PBH do vetor do lote).</li>
+          {% if resultado.lote_real and resultado.lote_real.testadas and not resultado.lote_real.geometria_complexa %}
+          <li><b>Testada · CTM</b> — calculada pelo Gabarito a partir do polígono do lote (CTM) e da Classificação Viária; pode diferir da testada grafada em planta.</li>
+          {% endif %}
+          <li><b>Bairro oficial</b> — camada Bairro Oficial (BHMAP), por ponto-em-polígono.</li>
+        </ul>
+      </details>
+    </section>
     {% endif %}
 
     {% set ns.sec = ns.sec + 1 %}
@@ -184,7 +222,6 @@
           <span class="k">Zoneamento</span>
           <span class="v vnum">{{ resultado.zoneamento.sigla }}</span>
           <span class="sub">{{ resultado.zoneamento.descricao }}</span>
-          {{ origem('BHMAP · camada Zoneamento') }}
         </div>
         <div class="cel cel-3">
           <span class="k">ADEs incidentes</span>
@@ -192,21 +229,33 @@
           {% if resultado.ade_setor_nome %}
           <span class="sub">Setor: {{ resultado.ade_setor_nome }}</span>
           {% endif %}
-          {{ origem('BHMAP · camadas ADE' + (' + Setores de ADE' if resultado.ade_setor_nome else '')) }}
         </div>
         {% if resultado.lote_real %}
-        <div class="cel"><span class="k">Centralidade Local</span><span class="v">{{ 'Sim' if resultado.lote_real.centralidade_local else 'Não' }}</span>{{ origem('BHMAP · Centralidade Local') }}</div>
-        <div class="cel"><span class="k">Conexão Verde</span><span class="v">{{ 'Sim' if resultado.lote_real.conexao_verde else 'Não' }}</span>{{ origem('BHMAP · Conexão Verde') }}</div>
+        <div class="cel"><span class="k">Centralidade Local</span><span class="v">{{ 'Sim' if resultado.lote_real.centralidade_local else 'Não' }}</span></div>
+        <div class="cel"><span class="k">Conexão Verde</span><span class="v">{{ 'Sim' if resultado.lote_real.conexao_verde else 'Não' }}</span></div>
         {% endif %}
         {% if resultado.via_mais_proxima %}
         <div class="cel {{ 'cel-2' if resultado.lote_real else 'cel-full' }}">
           <span class="k">Via do lote (provável)</span>
           <span class="v">{{ resultado.via_mais_proxima.nome }}</span>
           <span class="sub">{{ resultado.via_mais_proxima.classificacao }} · {{ resultado.via_mais_proxima.faixa_largura }} · a {{ resultado.via_mais_proxima.distancia_m }} m do ponto</span>
-          {{ origem('BHMAP · Classificação Viária (via mais próxima do ponto)') }}
         </div>
         {% endif %}
       </div>
+
+      <details class="fsec-fontes">
+        <summary>Fontes deste bloco</summary>
+        <ul>
+          <li><b>Zoneamento</b> — camada Zoneamento do BHMAP (Anexo I), por ponto-em-polígono.</li>
+          <li><b>ADEs incidentes{% if resultado.ade_setor_nome %} e setor{% endif %}</b> — camada{% if resultado.ade_setor_nome %}s{% endif %} ADE{% if resultado.ade_setor_nome %} + Setores de ADE{% endif %} do BHMAP, por ponto-em-polígono.</li>
+          {% if resultado.lote_real %}
+          <li><b>Centralidade Local · Conexão Verde</b> — camadas homônimas do BHMAP, por ponto-em-polígono.</li>
+          {% endif %}
+          {% if resultado.via_mais_proxima %}
+          <li><b>Via do lote</b> — camada Classificação Viária do BHMAP; é a via mais próxima do ponto (a {{ resultado.via_mais_proxima.distancia_m }} m), não confirmada como testada.</li>
+          {% endif %}
+        </ul>
+      </details>
     </section>
 
     {% set ns.sec = ns.sec + 1 %}
@@ -227,25 +276,23 @@
         {% if f.coef_aproveitamento.obs %}
         <div class="cel cel-full"><span class="k">Observação do CA</span><span class="v vsub">{{ f.coef_aproveitamento.obs }}</span></div>
         {% endif %}
-        <div class="cel cel-full cel-origem-linha">{{ origem('Coeficientes e quota: Anexo XII, tabela 10, pela sigla ' + resultado.zoneamento.sigla) }}</div>
         {% endif %}
 
         <div class="cel">
           <span class="k">Afastamento frontal</span>
           <span class="v vnum">{{ f.afastamento_frontal_m }}{% if f.afastamento_frontal_m is number %} <i>m</i>{% endif %}</span>
-          {{ origem('Anexo XII, t.3, pela classificação da via') }}
         </div>
         {% if amd_valor is not none %}
         <div class="cel">
           <span class="k">Altura máx. na divisa</span>
           <span class="v vnum">{{ '%g'|format(amd_valor) }} <i>m</i></span>
-          <span class="sub">Pela via deste lote (t.5)</span>
+          <span class="sub">Pela via deste lote</span>
         </div>
         {% endif %}
         {% if estudo %}
         <div class="cel">
           <span class="k">Afast. laterais e fundos</span>
-          <span class="v">Dependem da altura pretendida (t.4)</span>
+          <span class="v">Dependem da altura pretendida</span>
           <a href="#anexo-interativo" class="botao botao-mini botao-cel">Calcular no estudo ↓</a>
         </div>
         {% endif %}
@@ -253,16 +300,32 @@
         <div class="cel cel-3">
           <span class="k">Permeabilidade mín. (TP)</span>
           <span class="v vnum">{{ f.taxa_permeabilidade_min }}</span>
-          {{ origem('BHMAP · camada Taxa de Permeabilidade (Anexo II)') }}
         </div>
         <div class="cel cel-3">
           <span class="k">Ocupação máx. (TO)</span>
           <span class="v vnum">{{ f.taxa_ocupacao_max }}</span>
           {% if f.tp_observacao %}<span class="sub">{{ f.tp_observacao }}</span>{% endif %}
-          {{ origem('Anexo XII, t.11, pela TP do lote') }}
         </div>
         {% endif %}
       </div>
+
+      <details class="fsec-fontes">
+        <summary>Fontes deste bloco</summary>
+        <ul>
+          <li><b>Coeficientes de aproveitamento e quota</b> — Lei 11.181/19, Anexo XII, tabela 10, pela sigla {{ resultado.zoneamento.sigla }}.</li>
+          <li><b>Afastamento frontal</b> — Anexo XII (afastamento frontal por classificação da via: {{ resultado.via_mais_proxima.classificacao if resultado.via_mais_proxima else '—' }}).</li>
+          {% if amd_valor is not none %}
+          <li><b>Altura máxima na divisa</b> — Anexo XII (altura máxima na divisa), pela via e faixa de largura do lote.</li>
+          {% endif %}
+          {% if estudo %}
+          <li><b>Afastamentos laterais e de fundos</b> — Anexo XII, tabela 4 (fórmula com fator B); calculados por altura no estudo interativo.</li>
+          {% endif %}
+          {% if f.taxa_permeabilidade_min %}
+          <li><b>Permeabilidade mínima (TP)</b> — camada Taxa de Permeabilidade do BHMAP (Anexo II), por ponto-em-polígono.</li>
+          <li><b>Ocupação máxima (TO)</b> — Anexo XII, tabela 11, derivada da TP deste lote.</li>
+          {% endif %}
+        </ul>
+      </details>
     </section>
 
     {% if estudo %}
