@@ -595,10 +595,16 @@ Carmelo 93) como referência de conferência:
   desenhava/rotulava cada testada (nativo da v4). Caso de regressão travado:
   esquina Conselheiro Saraiva × Contria (lat -19.931656, lon -43.969709).
 - **Potencial construtivo na consulta (Fase 3 item 8, pedido K2)**: seção
-  própria `#potencial-construtivo` (antes do estudo interativo) com slider
-  de ÁREA partindo da área real do lote, mostrando m² CA básico/máximo e
-  unidades pela quota ao vivo (JS lê data-* do `.potencial-corpo`; zona já
-  conhecida, não precisa escolher). Botão "↺ área real" reseta.
+  própria `#potencial-construtivo` (antes do estudo interativo). REVISTO a
+  pedido do Arthur: a 1ª versão tinha slider de área — mas área é DADO do
+  lote (imutável), slider ali não fazia sentido. Agora é um GRÁFICO de 2
+  barras (CA básico × CA máximo, altura proporcional ao coeficiente) que
+  mostra "quantas vezes maior" é o máximo, com m² reais quando o lote foi
+  identificado (senão só os coeficientes ×N + nota). `_montar_potencial()`
+  no app.py calcula TUDO no servidor (m², unidades, alturas h_bas/h_max do
+  SVG) — SEM JS, então imprime igual no PDF. Espelha o gráfico da landing
+  (vol-bas/vol-max), mas estático. h_bas/h_max: a maior barra = 200px, a
+  outra proporcional (piso 24px p/ visibilidade).
 - **PDF diagramado (Fase 3 item 9)**: DECISÃO — CSS de impressão dedicado,
   NÃO server-side (WeasyPrint exigiria libs de sistema cairo/pango que
   complicariam o deploy no Render, que já foi difícil; print CSS entrega a

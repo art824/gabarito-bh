@@ -357,8 +357,9 @@
       </details>
     </section>
 
-    {% if estudo and estudo.ca_bas is not none %}
+    {% if potencial %}
     {% set ns.sec = ns.sec + 1 %}
+    {% set CHAO = 250 %}
     <section class="fsec fsec-potencial" id="potencial-construtivo">
       <header class="fsec-cab">
         <span class="num">0{{ ns.sec }}</span>
@@ -366,54 +367,90 @@
         <span class="fonte mono">Quanto dá pra construir</span>
       </header>
 
-      <div class="potencial-corpo"
-           data-cabas="{{ estudo.ca_bas }}"
-           data-camax="{{ estudo.ca_max if estudo.ca_max is not none else '' }}"
-           data-quota="{{ estudo.quota if estudo.quota is not none else '' }}"
-           data-quota-sem-limite="{{ '1' if estudo.quota_sem_limite else '' }}"
-           data-area-real="{{ estudo.area_real if estudo.area_real is not none else '' }}">
-
-        <div class="pot-controle">
-          <label for="pot-area">Área do terreno</label>
-          <output id="pot-area-out">—</output>
-          {% if estudo.area_real is not none %}
-          <button type="button" class="pot-reset" id="pot-reset" title="Voltar à área real do lote">↺ área real</button>
-          {% endif %}
-        </div>
-        <input type="range" id="pot-area" min="50" max="5000" step="10"
-               value="{{ estudo.area_real|round(0, 'floor')|int if estudo.area_real is not none else 360 }}">
-
-        <div class="pot-cards">
-          <div class="pot-card">
-            <span class="pot-k">Coeficiente básico</span>
-            <b class="pot-v">{{ '%g'|format(estudo.ca_bas) }}×</b>
-            <span class="pot-detalhe" id="pot-bas">—</span>
-            <span class="pot-nota">sem contrapartida</span>
-          </div>
-          {% if estudo.ca_max is not none and estudo.ca_max > estudo.ca_bas %}
-          <div class="pot-card pot-card-destaque">
-            <span class="pot-k">Coeficiente máximo</span>
-            <b class="pot-v">{{ '%g'|format(estudo.ca_max) }}×</b>
-            <span class="pot-detalhe" id="pot-max">—</span>
-            <span class="pot-nota">com outorga onerosa</span>
-          </div>
-          {% endif %}
-          <div class="pot-card">
-            <span class="pot-k">Unidades máx.</span>
-            <b class="pot-v" id="pot-un">—</b>
-            <span class="pot-nota">{% if estudo.quota_sem_limite %}sem limite de quota nesta zona{% elif estudo.quota is not none %}quota {{ '%g'|format(estudo.quota) }} m²/unidade{% else %}quota não definida{% endif %}</span>
-          </div>
+      <div class="potencial-corpo">
+        <div class="pot-grafico">
+          <svg viewBox="0 0 300 290" xmlns="http://www.w3.org/2000/svg" aria-label="Comparação entre coeficiente básico e máximo">
+            <defs>
+              <pattern id="hx-pot-bas" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <line x1="0" y1="0" x2="0" y2="8" stroke="#14202C" stroke-width="1.4"/>
+              </pattern>
+              <pattern id="hx-pot-max" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <line x1="0" y1="0" x2="0" y2="8" stroke="#B0402C" stroke-width="1.6"/>
+              </pattern>
+            </defs>
+            <!-- chão -->
+            <line x1="20" y1="{{ CHAO }}" x2="280" y2="{{ CHAO }}" stroke="#14202C" stroke-width="2"/>
+            <!-- barra CA básico -->
+            <rect x="55" y="{{ CHAO - potencial.h_bas }}" width="80" height="{{ potencial.h_bas }}" fill="url(#hx-pot-bas)" stroke="#14202C" stroke-width="1.5"/>
+            <text x="95" y="{{ CHAO - potencial.h_bas - 20 }}" text-anchor="middle" class="pot-svg-ca">{{ '%g'|format(potencial.ca_bas) }}×</text>
+            {% if potencial.m2_bas %}<text x="95" y="{{ CHAO - potencial.h_bas - 6 }}" text-anchor="middle" class="pot-svg-m2">{{ '{:,.0f}'.format(potencial.m2_bas).replace(',', '.') }} m²</text>{% endif %}
+            <text x="95" y="{{ CHAO + 16 }}" text-anchor="middle" class="pot-svg-rot">BÁSICO</text>
+            {% if potencial.h_max %}
+            <!-- barra CA máximo -->
+            <rect x="165" y="{{ CHAO - potencial.h_max }}" width="80" height="{{ potencial.h_max }}" fill="url(#hx-pot-max)" stroke="#B0402C" stroke-width="1.8"/>
+            <text x="205" y="{{ CHAO - potencial.h_max - 20 }}" text-anchor="middle" class="pot-svg-ca pot-svg-terra">{{ '%g'|format(potencial.ca_max) }}×</text>
+            {% if potencial.m2_max %}<text x="205" y="{{ CHAO - potencial.h_max - 6 }}" text-anchor="middle" class="pot-svg-m2 pot-svg-terra">{{ '{:,.0f}'.format(potencial.m2_max).replace(',', '.') }} m²</text>{% endif %}
+            <text x="205" y="{{ CHAO + 16 }}" text-anchor="middle" class="pot-svg-rot pot-svg-terra">MÁXIMO</text>
+            {% endif %}
+          </svg>
         </div>
 
-        <p class="pot-aviso">Potencial teórico pela área e pelo coeficiente da zona. O que cabe de fato depende de afastamentos, permeabilidade e altura — veja no estudo interativo abaixo.</p>
+        <div class="pot-lado">
+          {% if potencial.vezes_maior %}
+          <p class="pot-headline">Com outorga onerosa, dá pra construir até <b>{{ '%g'|format(potencial.vezes_maior) }}× o básico</b> neste lote.</p>
+          {% else %}
+          <p class="pot-headline">Nesta zona o coeficiente é <b>{{ '%g'|format(potencial.ca_bas) }}×</b> a área do terreno.</p>
+          {% endif %}
+
+          <div class="pot-cards">
+            {% if potencial.area %}
+            <div class="pot-card">
+              <span class="pot-k">Área do lote</span>
+              <b class="pot-v">{{ '{:,.0f}'.format(potencial.area).replace(',', '.') }} <i>m²</i></b>
+              <span class="pot-nota">dado do lote (CTM)</span>
+            </div>
+            {% endif %}
+            <div class="pot-card">
+              <span class="pot-k">Potencial básico</span>
+              <b class="pot-v">{% if potencial.m2_bas %}{{ '{:,.0f}'.format(potencial.m2_bas).replace(',', '.') }} <i>m²</i>{% else %}{{ '%g'|format(potencial.ca_bas) }}× a área{% endif %}</b>
+              <span class="pot-nota">sem contrapartida</span>
+            </div>
+            {% if potencial.ca_max and potencial.ca_max > potencial.ca_bas %}
+            <div class="pot-card pot-card-destaque">
+              <span class="pot-k">Potencial máximo</span>
+              <b class="pot-v">{% if potencial.m2_max %}{{ '{:,.0f}'.format(potencial.m2_max).replace(',', '.') }} <i>m²</i>{% else %}{{ '%g'|format(potencial.ca_max) }}× a área{% endif %}</b>
+              <span class="pot-nota">com outorga onerosa</span>
+            </div>
+            {% endif %}
+            {% if potencial.unidades is not none %}
+            <div class="pot-card">
+              <span class="pot-k">Unidades máx.</span>
+              <b class="pot-v">≈ {{ potencial.unidades }}</b>
+              <span class="pot-nota">quota {{ '%g'|format(potencial.quota) }} m²/unidade</span>
+            </div>
+            {% elif potencial.quota_sem_limite %}
+            <div class="pot-card">
+              <span class="pot-k">Unidades máx.</span>
+              <b class="pot-v">sem limite</b>
+              <span class="pot-nota">sem quota de terreno nesta zona</span>
+            </div>
+            {% endif %}
+          </div>
+
+          {% if not potencial.area %}
+          <p class="pot-nota-area">Lote não identificado no cadastro — os m² dependem da área; use o estudo interativo abaixo para informá-la.</p>
+          {% endif %}
+        </div>
       </div>
+
+      <p class="pot-aviso">Potencial teórico pelo coeficiente da zona{% if potencial.area %} e pela área do lote{% endif %}. O que cabe de fato depende de afastamentos, permeabilidade e altura — veja no estudo interativo abaixo.</p>
 
       <details class="fsec-fontes">
         <summary><span class="fsec-fontes-btn">De onde vêm estes dados?</span></summary>
         <ul>
           <li><b>Coeficientes e quota</b> — Lei 11.181/19, Anexo XII, tabela 10, pela sigla {{ resultado.zoneamento.sigla }}.</li>
-          {% if estudo.area_real is not none %}
-          <li><b>Área inicial</b> — área oficial do lote no CTM ({{ '%g'|format(estudo.area_real) }} m²); o slider permite simular outras áreas.</li>
+          {% if potencial.area %}
+          <li><b>Área do lote</b> — área oficial no CTM ({{ '%g'|format(potencial.area) }} m²).</li>
           {% endif %}
           <li><b>Cálculo</b> — potencial = área × coeficiente; unidades = potencial básico ÷ quota (contas do próprio Gabarito).</li>
         </ul>

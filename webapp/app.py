@@ -298,6 +298,50 @@ def _montar_identificacao(res: dict, extras: dict, indice_consultado: str | None
     }
 
 
+def _montar_potencial(res: dict) -> dict | None:
+    """Bloco de potencial construtivo (pedido da K2). O que agrega é a
+    COMPARAÇÃO VISUAL entre CA básico e CA máximo — quanto a mais dá pra
+    construir com outorga. A área NÃO é interativa (é dado do lote, imutável);
+    quando o lote foi identificado, mostramos os m² reais, senão só os
+    coeficientes. Calculado no servidor (sem JS) — funciona igual no PDF."""
+    if not res.get("zoneamento"):
+        return None
+    ficha = res.get("ficha", {})
+    ca = ficha.get("coef_aproveitamento") or {}
+    ca_bas = _num(ca.get("ca_bas"))
+    if ca_bas is None or ca_bas <= 0:
+        return None
+    ca_max = _num(ca.get("ca_max"))
+    quota = _num(ca.get("qt_m2_un"))
+    quota_sem_limite = ca.get("qt_m2_un") == "sem_limite"
+
+    lote_real = res.get("lote_real")
+    area = None
+    if lote_real and not lote_real.get("geometria_complexa"):
+        area = lote_real.get("area_m2")
+
+    # alturas do gráfico: a maior barra ocupa ALTURA_MAX; a outra é
+    # proporcional ao coeficiente (mostra "quantas vezes maior")
+    ALTURA_MAX, PISO = 200.0, 24.0
+    ca_ref = max(ca_bas, ca_max or 0)
+    h_bas = max(PISO, ALTURA_MAX * ca_bas / ca_ref)
+    h_max = max(PISO, ALTURA_MAX * ca_max / ca_ref) if ca_max else None
+
+    return {
+        "area": area,
+        "ca_bas": ca_bas,
+        "ca_max": ca_max,
+        "quota": quota,
+        "quota_sem_limite": quota_sem_limite,
+        "m2_bas": round(area * ca_bas) if area else None,
+        "m2_max": round(area * ca_max) if (area and ca_max) else None,
+        "unidades": int((area * ca_bas) // quota) if (area and quota and quota > 0) else None,
+        "vezes_maior": round(ca_max / ca_bas, 1) if (ca_max and ca_max > ca_bas) else None,
+        "h_bas": round(h_bas, 1),
+        "h_max": round(h_max, 1) if h_max else None,
+    }
+
+
 def _montar_veredito(res: dict) -> dict | None:
     """Síntese "pode construir?" pro topo da ficha (pedido da K2, pensando em
     corretores). É a PRIMEIRA coisa da ficha. REGRA DE OURO: nunca afirmar
@@ -403,6 +447,7 @@ def consulta_page():
         "modo": "endereco",
         "rotulos_ca": ROTULOS_CA, "amd_valor": None,
         "estudo": None, "identificacao": None, "veredito": None, "frentes": None,
+        "potencial": None,
         "data_emissao": date.today().strftime("%d/%m/%Y"),
     }
     if request.method == "GET":
@@ -494,6 +539,7 @@ def consulta_page():
     )
     contexto["veredito"] = _montar_veredito(res)
     contexto["frentes"] = _montar_frentes(res)
+    contexto["potencial"] = _montar_potencial(res)
     for exc in ficha.get("excecoes_incidentes", []):
         exc["regra"] = _texto_regra(exc["regra"])
     return render_template("consulta.html", **contexto)

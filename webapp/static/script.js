@@ -211,47 +211,8 @@
     });
   })();
 
-  /* ---------- 5. Potencial construtivo na consulta (slider de área) ----------
-     Bloco destacado pedido pela K2 ("o que corretores mais querem ver"):
-     zona já conhecida, slider de área partindo da área real do lote. */
-  var potCorpo = document.querySelector(".potencial-corpo");
-  if (potCorpo) {
-    var potArea = document.getElementById("pot-area");
-    var potAreaOut = document.getElementById("pot-area-out");
-    var potBas = document.getElementById("pot-bas");
-    var potMax = document.getElementById("pot-max");
-    var potUn = document.getElementById("pot-un");
-    var potReset = document.getElementById("pot-reset");
-    var caBas = parseFloat(potCorpo.dataset.cabas);
-    var caMax = potCorpo.dataset.camax ? parseFloat(potCorpo.dataset.camax) : null;
-    var quota = potCorpo.dataset.quota ? parseFloat(potCorpo.dataset.quota) : null;
-    var quotaSemLimite = potCorpo.dataset.quotaSemLimite === "1";
-    var areaReal = potCorpo.dataset.areaReal ? parseFloat(potCorpo.dataset.areaReal) : null;
-
-    function atualizarPot() {
-      var a = parseInt(potArea.value, 10);
-      potAreaOut.textContent = fmtBR(a) + " m²";
-      if (potBas) potBas.textContent = fmtBR(a * caBas) + " m²";
-      if (potMax && caMax !== null) potMax.textContent = fmtBR(a * caMax) + " m²";
-      if (potUn) {
-        if (quotaSemLimite) potUn.textContent = "sem limite";
-        else if (quota && quota > 0) potUn.textContent = "≈ " + fmtBR(Math.floor((a * caBas) / quota)) + " un.";
-        else potUn.textContent = "—";
-      }
-    }
-    // garante que a área real caiba no range do slider
-    if (areaReal !== null && areaReal > parseInt(potArea.max, 10)) {
-      potArea.max = Math.ceil(areaReal / 100) * 100;
-    }
-    potArea.addEventListener("input", atualizarPot);
-    if (potReset && areaReal !== null) {
-      potReset.addEventListener("click", function () {
-        potArea.value = Math.round(areaReal);
-        atualizarPot();
-      });
-    }
-    atualizarPot();
-  }
+  /* Potencial construtivo: agora é 100% renderizado no servidor (gráfico +
+     números), sem interatividade — a área é dado do lote, não algo a variar. */
 
   /* ---------- 6. Anexo interativo — polígono real do lote ----------
      Quando o lote foi identificado no CTM, o contorno/envelope vêm do
