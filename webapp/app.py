@@ -425,17 +425,12 @@ def _montar_veredito(res: dict, cindacta: dict | None = None) -> dict | None:
     # CINDACTA: única restrição capaz de zerar a construção (altura ≤ ~3m,
     # o mínimo pra qualquer pavimento útil — mesmo piso usado no motor do
     # anexo interativo, ver desenho_lote.calcular_altura_maxima h_min=3.0).
+    # O valor em si é exibido em destaque no próprio bloco do veredito
+    # (não repetido aqui em "verificado" pra não duplicar).
     cindacta = cindacta or {}
     altura_cindacta = cindacta.get("atual_m") if cindacta.get("disponivel") else None
     cindacta_zera = altura_cindacta is not None and altura_cindacta <= 3.0
-    if cindacta.get("disponivel") is True:
-        if not cindacta_zera:
-            verificado.append(
-                f"Altura máxima liberada pela proteção aeronáutica (CINDACTA): {altura_cindacta:g}m."
-            )
-    elif cindacta.get("disponivel") is False:
-        pass  # sem restrição registrada neste ponto — nada a acrescentar
-    else:
+    if cindacta.get("disponivel") is None:
         nao_verificado.append("Altura máxima por aeródromo (CINDACTA) — serviço de consulta indisponível no momento")
 
     # Estado principal — verde quando há parâmetro construtivo e a zona não é

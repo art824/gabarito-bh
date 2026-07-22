@@ -690,6 +690,26 @@ extensa (documentada aqui pra não repetir buscas):
   atual 75m, anterior 29m) — depende de rede; se a PBH atualizar a série
   (novo período), o teste vai falhar e precisa ajuste (não é bug).
 
+## FEITO (07/2026) — ajustes de UX pós-CINDACTA
+- **Veredito e CINDACTA viraram UM bloco só** (pedido do Arthur vendo a
+  ficha real): antes eram 2 cartões separados; agora `.veredito-cindacta`
+  vive DENTRO do card do veredito, com um separador sutil (borda superior
+  fina), não uma segunda caixa com borda própria. A linha "Altura máxima
+  liberada..." saiu de `verificado` (ficaria duplicada — já aparece em
+  destaque no próprio bloco).
+- **Reposicionado**: o card (veredito+CINDACTA) não é mais a primeira coisa
+  da ficha — agora fica DEPOIS da seção 02 (Enquadramento), antes de
+  Parâmetros construtivos. Ordem final: carimbo → 01 Identificação →
+  02 Enquadramento → veredito/CINDACTA → 03 Parâmetros → Potencial → Estudo.
+- **Overlay de carregamento na home** (`landing.html`): a busca da home
+  faz um POST que NAVEGA pra `/consulta` (não é AJAX) — o esqueleto local
+  já usado em `consulta.html` não serve aqui (a página muda inteira).
+  Solução: `#carregando-overlay` fixo em tela cheia (fundo escurecido +
+  blur + spinner), ativado no `submit` do form (sem `preventDefault` — só
+  mostra visualmente enquanto o navegador processa a navegação de verdade).
+  Cobre a espera de ~5s (geocodificação + motor + agora também a consulta
+  ao vivo do CINDACTA, que soma latência de rede).
+
 ## Roteiro
 - Fase 1.5 (ATUAL): geocodificação endereço→lat/lon + bateria de testes com os
   endereços de resposta conhecida do Arthur. GATE: só ir p/ fase 2 se bater.

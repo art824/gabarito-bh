@@ -125,6 +125,26 @@
     });
   }
 
+  /* ---------- 3b. Overlay de carregamento no envio do form da home ----------
+     Igual ao esqueleto da página de consulta, mas em tela cheia: aqui a
+     busca navega pra OUTRA página (/consulta), então não dá pra mostrar um
+     esqueleto da ficha — só um "consultando..." cobrindo a tela até a nova
+     página chegar (a consulta pode levar alguns segundos: geocodificação +
+     motor + a consulta ao vivo do CINDACTA). */
+  var buscaHero = document.querySelector(".busca-hero");
+  var overlayCarregando = document.getElementById("carregando-overlay");
+  if (buscaHero && overlayCarregando) {
+    buscaHero.addEventListener("submit", function () {
+      var modo = document.getElementById("hero-modo").value;
+      var campo = modo === "indice" ? document.getElementById("busca-indice") : document.getElementById("busca-input");
+      if (!campo || !campo.value.trim()) return;
+      overlayCarregando.hidden = false;
+      overlayCarregando.setAttribute("aria-hidden", "false");
+      var btn = buscaHero.querySelector('button[type="submit"]');
+      if (btn) { btn.disabled = true; btn.textContent = "Consultando…"; }
+    });
+  }
+
   /* ---------- 4. Calculadora de potencial construtivo (landing) ---------- */
   var slider = document.getElementById("calc-area");
   if (slider) {

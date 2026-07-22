@@ -1362,40 +1362,38 @@ input[type="range"]::-moz-range-thumb {
   line-height: 1.45;
 }
 
-/* CINDACTA — restrição aeronáutica, consultada ao vivo */
-.cindacta-bloco {
-  border: 2px solid var(--terra);
-  background: #FBF3EE;
-  padding: 16px 20px;
-  margin: 0 0 22px;
-  border-radius: 3px;
+/* CINDACTA — restrição aeronáutica, consultada ao vivo. Agora VIVE DENTRO
+   do card do veredito (um bloco só, não dois cartões separados). */
+.veredito-cindacta {
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1px solid rgba(0,0,0,.12);
 }
-.cindacta-bloco.cindacta-zerado { border-color: #A33; background: #FBEDED; }
 .cindacta-titulo {
   font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
-  color: var(--terra); margin: 0 0 8px;
+  color: var(--terra); margin: 0 0 6px;
 }
 .cindacta-valor {
   font-family: var(--serif, 'Fraunces', serif);
-  font-size: 24px; font-weight: 700; color: var(--tinta);
+  font-size: 22px; font-weight: 700; color: var(--tinta);
   display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
 }
-.cindacta-valor i { font-size: 13px; font-style: normal; color: var(--grafite, #8B8574); }
+.cindacta-valor i { font-size: 12.5px; font-style: normal; color: var(--grafite, #8B8574); }
 .cindacta-desde {
   font-family: var(--mono); font-size: 10.5px; color: var(--grafite, #8B8574);
   margin-left: auto;
 }
 .cindacta-anterior {
-  font-size: 12.5px; color: var(--tinta-2, #3A4652); margin: 10px 0 0;
-  padding-top: 10px; border-top: 1px dashed var(--linha, #C9C2B0);
+  font-size: 12px; color: var(--tinta-2, #3A4652); margin: 8px 0 0; line-height: 1.4;
 }
 .cindacta-aviso {
   font-size: 11.5px; color: var(--grafite, #6B6552); margin: 10px 0 0; line-height: 1.4;
 }
-.cindacta-bloco .fsec-fontes { margin: 10px 0 0; padding-top: 8px; }
+.veredito-fonte-cindacta {
+  font-size: 11px; color: var(--grafite, #8B8574); margin: 6px 0 0;
+}
 .cindacta-indisponivel {
-  margin: 0 0 22px; padding: 12px 16px;
-  border: 1px dashed var(--grafite, #8B8574);
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1px solid rgba(0,0,0,.12);
   font-size: 12.5px; color: var(--grafite, #6B6552);
 }
 @media (max-width: 760px) {
@@ -1435,6 +1433,37 @@ input[type="range"]::-moz-range-thumb {
 }
 @media (prefers-reduced-motion: reduce) {
   .sk { animation: none; opacity: .7; }
+}
+
+/* overlay de carregamento em tela cheia — busca da home (navega pra outra
+   página, então não dá pra usar o esqueleto local da ficha) */
+.carregando-overlay {
+  position: fixed; inset: 0; z-index: 999;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(20, 32, 44, .55);
+  backdrop-filter: blur(3px);
+}
+.carregando-caixa {
+  background: var(--papel, #FBF8F0);
+  border: 2px solid var(--tinta);
+  padding: 28px 34px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  box-shadow: 6px 6px 0 rgba(0,0,0,.25);
+}
+.carregando-caixa p {
+  font-family: var(--mono); font-size: 12.5px; letter-spacing: .04em;
+  color: var(--tinta); margin: 0;
+}
+.carregando-spinner {
+  width: 34px; height: 34px;
+  border: 3px solid var(--linha, #C9C2B0);
+  border-top-color: var(--terra);
+  border-radius: 50%;
+  animation: carregando-girar .8s linear infinite;
+}
+@keyframes carregando-girar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .carregando-spinner { animation: none; }
 }
 
 /* veredito "pode construir?" — PRIMEIRA coisa da ficha, verde e enxuto (K2) */
