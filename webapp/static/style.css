@@ -1361,6 +1361,43 @@ input[type="range"]::-moz-range-thumb {
   margin: 16px 22px 4px; font-size: 12px; color: var(--grafite, #6B6552);
   line-height: 1.45;
 }
+
+/* CINDACTA — restrição aeronáutica, consultada ao vivo */
+.cindacta-bloco {
+  border: 2px solid var(--terra);
+  background: #FBF3EE;
+  padding: 16px 20px;
+  margin: 0 0 22px;
+  border-radius: 3px;
+}
+.cindacta-bloco.cindacta-zerado { border-color: #A33; background: #FBEDED; }
+.cindacta-titulo {
+  font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--terra); margin: 0 0 8px;
+}
+.cindacta-valor {
+  font-family: var(--serif, 'Fraunces', serif);
+  font-size: 24px; font-weight: 700; color: var(--tinta);
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+}
+.cindacta-valor i { font-size: 13px; font-style: normal; color: var(--grafite, #8B8574); }
+.cindacta-desde {
+  font-family: var(--mono); font-size: 10.5px; color: var(--grafite, #8B8574);
+  margin-left: auto;
+}
+.cindacta-anterior {
+  font-size: 12.5px; color: var(--tinta-2, #3A4652); margin: 10px 0 0;
+  padding-top: 10px; border-top: 1px dashed var(--linha, #C9C2B0);
+}
+.cindacta-aviso {
+  font-size: 11.5px; color: var(--grafite, #6B6552); margin: 10px 0 0; line-height: 1.4;
+}
+.cindacta-bloco .fsec-fontes { margin: 10px 0 0; padding-top: 8px; }
+.cindacta-indisponivel {
+  margin: 0 0 22px; padding: 12px 16px;
+  border: 1px dashed var(--grafite, #8B8574);
+  font-size: 12.5px; color: var(--grafite, #6B6552);
+}
 @media (max-width: 760px) {
   .potencial-corpo { grid-template-columns: 1fr; gap: 14px; }
   .pot-grafico { max-width: 260px; margin: 0 auto; }

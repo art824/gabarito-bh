@@ -44,17 +44,17 @@ feature** — "melhor mostrar 'indisponível' do que informação errada".
 
 ## 🔜 DAQUI PRA FRENTE — em ordem de prioridade
 
-### 1. CINDACTA / altura de aeródromo — **prioridade máxima**
-"Make or break" segundo a K2: desclassifica lotes inteiros e quase ninguém
-em BH sabe calcular. O IBED 2295519 já nos mostrou a ESTRUTURA da resposta:
-> Zona de proteção: HIN (Superfície Horizontal Interna) · cota altimétrica
-> limite 829 m · cota do terreno 800 m · **altura máxima 29 m**
-
-Passos: (a) Arthur envia os dados/tabelas do DECEA e explica a regra;
-(b) estudo de viabilidade (formato, cobertura, como cruzar espacialmente);
-(c) integrar na ficha com origem e disclaimers; (d) se entrar, vira também
-o teto do slider de altura no anexo interativo.
-**Depende de:** Arthur mandar os dados. É o próximo trabalho grande.
+### 1. CINDACTA / altura de aeródromo — **FEITO (21-22/07/2026)**
+Não existe camada baixável das superfícies clássicas do aeródromo — testado
+exaustivamente nos dois portais WFS/WMS da PBH. A solução real: a PBH
+mantém `BHMAP_ALTIMETRIA` (WFS, consultada ao vivo por ponto, ver
+`engine/cindacta.py`), com o histórico da altura já liberada por lote pelo
+CINDACTA. Implementado: bloco na ficha com valor atual + anterior (com
+aviso de que a IBED pode estar desatualizada), e o veredito "pode
+construir" só vira "não" quando a altura liberada é ≤ 3m. Detalhes técnicos
+completos e as armadilhas encontradas estão no CLAUDE.md.
+**Pendente:** usar esse valor como teto do slider de altura no anexo
+interativo (item (d) do plano original) — ainda não feito.
 
 ### 2. Fechar as pontas do que já está no ar
 - **Domínio próprio** (`gabaritoarq.com.br`): DNS configurado no Registro.br,

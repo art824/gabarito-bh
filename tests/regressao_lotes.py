@@ -19,8 +19,11 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE / "engine"))
 
-from consulta import carregar_camadas, consultar          # noqa: E402
-from indice_cadastral import buscar_por_indice            # noqa: E402
+from consulta import carregar_camadas, consultar, CRS_DADOS   # noqa: E402
+from indice_cadastral import buscar_por_indice                # noqa: E402
+from cindacta import consultar_altimetria_aero, CindactaError  # noqa: E402
+import geopandas as gpd                                        # noqa: E402
+from shapely.geometry import Point                             # noqa: E402
 
 CASOS = [
     {
@@ -36,6 +39,11 @@ CASOS = [
         },
         # IBED declara 1000 m²; o CTM calcula do vetor do lote — tolerância 5%
         "area_ctm_aprox": (1000.0, 0.05),
+        # CINDACTA (consulta ao vivo, ver engine/cindacta.py): valor "atual"
+        # e "anterior" da camada BHMAP_ALTIMETRIA pra este lote, confirmados
+        # batendo com o popup do BHMap em 21/07/2026. Se a PBH atualizar a
+        # série (novo período), este caso vai falhar — é esperado, ajustar.
+        "cindacta_esperado": {"atual_m": 75.0, "anterior_m": 29.0},
     },
     {
         "nome": "Esquina Conselheiro Saraiva × Contria — 2 testadas LOCAL (AF 3m cada)",
@@ -109,6 +117,22 @@ def main():
             print(f"  [{status}] {nome} :: area_ctm ≈ {alvo:g} m² (±{tol:.0%}) = {area!r}")
             if not ok:
                 falhas.append((nome, "area_ctm", alvo, area))
+
+        if "cindacta_esperado" in caso:
+            ponto = gpd.GeoSeries([Point(lon, lat)], crs="EPSG:4326").to_crs(CRS_DADOS).iloc[0]
+            try:
+                r = consultar_altimetria_aero(ponto.x, ponto.y)
+            except CindactaError as e:
+                print(f"  [pulado] {nome} :: CINDACTA — serviço da PBH indisponível ({e}), não conta como falha")
+                r = None
+            if r is not None:
+                for campo, alvo in caso["cindacta_esperado"].items():
+                    obtido = r.get(campo)
+                    ok = obtido == alvo
+                    status = "ok  " if ok else "FALHA"
+                    print(f"  [{status}] {nome} :: cindacta.{campo} = {obtido!r} (esperado {alvo!r})")
+                    if not ok:
+                        falhas.append((nome, f"cindacta.{campo}", alvo, obtido))
 
     print()
     if falhas:

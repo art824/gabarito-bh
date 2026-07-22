@@ -28,6 +28,7 @@ from desenho_lote import (
 from geocode import endereco_para_latlon, GeocodeError
 from indice_cadastral import buscar_por_indice, IndiceCadastralError
 from db_lotes import registros_indice_por_nulotctm
+from cindacta import consultar_altimetria_aero, CindactaError
 
 app = Flask(__name__)
 
@@ -342,7 +343,31 @@ def _montar_potencial(res: dict) -> dict | None:
     }
 
 
-def _montar_veredito(res: dict) -> dict | None:
+def _montar_cindacta(lat: float, lon: float) -> dict:
+    """Restrição de altura por proteção aeronáutica (CINDACTA 1), consultada
+    ao vivo (ver engine/cindacta.py — não existe camada baixável das
+    superfícies clássicas do aeródromo). Quem manda nessa restrição é o
+    CINDACTA, não a PBH — quando o valor mais recente da série histórica
+    diverge do que a Informação Básica (IBED) da PBH mostra, é a IBED que
+    está desatualizada (o campo mais recente É o registro do CINDACTA)."""
+    ponto = gpd.GeoSeries([Point(lon, lat)], crs="EPSG:4326").to_crs(CRS_DADOS).iloc[0]
+    try:
+        r = consultar_altimetria_aero(ponto.x, ponto.y)
+    except CindactaError:
+        return {"disponivel": None}  # serviço fora do ar — não trava a ficha
+    if r is None:
+        return {"disponivel": False}
+    return {
+        "disponivel": True,
+        "atual_m": r["atual_m"],
+        "atual_desde": r["atual_desde"],
+        "anterior_m": r["anterior_m"],
+        "anterior_periodo": r["anterior_periodo"],
+        "desatualizado": r["anterior_m"] is not None and r["anterior_m"] != r["atual_m"],
+    }
+
+
+def _montar_veredito(res: dict, cindacta: dict | None = None) -> dict | None:
     """Síntese "pode construir?" pro topo da ficha (pedido da K2, pensando em
     corretores). É a PRIMEIRA coisa da ficha. REGRA DE OURO: nunca afirmar
     além do que as bases mostram — nunca dizemos "não pode" a menos que
@@ -381,7 +406,6 @@ def _montar_veredito(res: dict) -> dict | None:
             atencoes.append(alerta)
 
     nao_verificado = [
-        "Altura máxima por aeródromo (CINDACTA/DECEA)",
         "Área de Preservação Permanente (APP) e meio ambiente",
         "Patrimônio cultural (tombamentos e proteção)",
     ]
@@ -398,11 +422,31 @@ def _montar_veredito(res: dict) -> dict | None:
             f"Ocupação máxima de {to_pct:g}% e permeabilidade mínima de {tp_pct:g}% do terreno."
         )
 
+    # CINDACTA: única restrição capaz de zerar a construção (altura ≤ ~3m,
+    # o mínimo pra qualquer pavimento útil — mesmo piso usado no motor do
+    # anexo interativo, ver desenho_lote.calcular_altura_maxima h_min=3.0).
+    cindacta = cindacta or {}
+    altura_cindacta = cindacta.get("atual_m") if cindacta.get("disponivel") else None
+    cindacta_zera = altura_cindacta is not None and altura_cindacta <= 3.0
+    if cindacta.get("disponivel") is True:
+        if not cindacta_zera:
+            verificado.append(
+                f"Altura máxima liberada pela proteção aeronáutica (CINDACTA): {altura_cindacta:g}m."
+            )
+    elif cindacta.get("disponivel") is False:
+        pass  # sem restrição registrada neste ponto — nada a acrescentar
+    else:
+        nao_verificado.append("Altura máxima por aeródromo (CINDACTA) — serviço de consulta indisponível no momento")
+
     # Estado principal — verde quando há parâmetro construtivo e a zona não é
-    # de ocupação mínima; terra quando há atenção relevante. Nunca "não pode"
-    # sem base (fora de zoneamento já é barrado antes de chegar aqui).
+    # de ocupação mínima nem zerada pelo CINDACTA; terra quando há atenção
+    # relevante. Nunca "não pode" sem base concreta.
     pode = ca_bas is not None and ca_bas > 0
-    if pode and not muito_restritivo:
+    if cindacta_zera:
+        estado = "restrito"
+        titulo = "Não pode construir — restrição aeronáutica"
+        subtitulo = f"CINDACTA libera apenas {altura_cindacta:g}m de altura neste ponto — insuficiente para edificação."
+    elif pode and not muito_restritivo:
         estado = "sim"
         titulo = "Pode construir"
         subtitulo = f"Zoneamento {sigla} permite construção."
@@ -447,7 +491,7 @@ def consulta_page():
         "modo": "endereco",
         "rotulos_ca": ROTULOS_CA, "amd_valor": None,
         "estudo": None, "identificacao": None, "veredito": None, "frentes": None,
-        "potencial": None,
+        "potencial": None, "cindacta": None,
         "data_emissao": date.today().strftime("%d/%m/%Y"),
     }
     if request.method == "GET":
@@ -537,7 +581,8 @@ def consulta_page():
         res, EXTRAS,
         indice_consultado=contexto["indice_cadastral"] if modo == "indice" else None,
     )
-    contexto["veredito"] = _montar_veredito(res)
+    contexto["cindacta"] = _montar_cindacta(g["lat"], g["lon"])
+    contexto["veredito"] = _montar_veredito(res, contexto["cindacta"])
     contexto["frentes"] = _montar_frentes(res)
     contexto["potencial"] = _montar_potencial(res)
     for exc in ficha.get("excecoes_incidentes", []):

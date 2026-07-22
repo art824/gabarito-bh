@@ -118,6 +118,28 @@
     </div>
     {% endif %}
 
+    {% if cindacta and cindacta.disponivel %}
+    <div class="cindacta-bloco {{ 'cindacta-zerado' if cindacta.atual_m <= 3 else '' }}">
+      <p class="cindacta-titulo mono">Restrição aeronáutica · CINDACTA 1</p>
+      <div class="cindacta-valor">
+        <b>{{ '%g'|format(cindacta.atual_m) }}</b> <i class="mono">m de altura máxima</i>
+        <span class="cindacta-desde">vigente desde {{ cindacta.atual_desde }}</span>
+      </div>
+      {% if cindacta.desatualizado %}
+      <p class="cindacta-anterior">Valor anterior ({{ cindacta.anterior_periodo }}): <b>{{ '%g'|format(cindacta.anterior_m) }} m</b> — se a Informação Básica (IBED) que você tirou na PBH mostra esse número, ela ainda não foi atualizada com a mudança mais recente do CINDACTA.</p>
+      {% endif %}
+      <p class="cindacta-aviso">O Gabarito não se responsabiliza por este valor — é a leitura mais recente do cadastro público da PBH sobre a determinação do CINDACTA, consultada ao vivo no momento desta busca. Confirme diretamente com o CINDACTA 1 antes de projetar.</p>
+      <details class="fsec-fontes">
+        <summary><span class="fsec-fontes-btn">De onde vem este dado?</span></summary>
+        <ul>
+          <li>Camada <b>BHMAP_ALTIMETRIA</b> (PBH, workspace geosiurbe) — histórico de altura liberada por lote, atualizado conforme decisões do CINDACTA 1. Consultada ao vivo (não é uma base baixada).</li>
+        </ul>
+      </details>
+    </div>
+    {% elif cindacta and cindacta.disponivel is none %}
+    <p class="cindacta-indisponivel">⚠ Não foi possível consultar agora a restrição aeronáutica (CINDACTA) — o serviço da PBH pode estar fora do ar. Recarregue a página em alguns instantes.</p>
+    {% endif %}
+
     {% if identificacao %}
     {% set ns.sec = ns.sec + 1 %}
     <section class="fsec">

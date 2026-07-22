@@ -624,6 +624,72 @@ Carmelo 93) como referência de conferência:
   `document.styleSheets` → `CSSRule.MEDIA_RULE` com conditionText 'print')
   para um `<style>` aplicado à tela e medir se `.ficha` continua visível.
 
+## FEITO (07/2026) — Fase 4: restrição aeronáutica (CINDACTA 1), consulta ao vivo
+"Make or break" segundo a K2 — item mais complexo do plano. Investigação
+extensa (documentada aqui pra não repetir buscas):
+- **Não existe camada baixável** das superfícies clássicas do aeródromo
+  (HIN/AT/ACN/AAL/AAO/VOR — as siglas do BHMap). Testado exaustivamente:
+  WFS/WMS GetCapabilities dos DOIS portais da PBH (`geosiurbe`/webmapsiurbe,
+  99 camadas, e `idebhgeo`/bhmap v2, 342 camadas) — nenhuma bate com essas
+  siglas. `DIRETRIZ_ALTIMETRIA` (que parecia promissora) é na verdade sobre
+  PATRIMÔNIO CULTURAL, não CINDACTA — confirmado espacialmente (61 dos seus
+  lotes ficam a <200m da Praça da Liberdade, longe de qualquer zona de
+  aeroporto; e bate com a seção "Diretrizes de Proteção"/DPCA-FMC do IBED).
+- **Curva de nível 5m**: validado como fonte de cota do terreno — testado
+  contra o IBED real (Rua do Carmelo 93): cota do terreno = 800m em ambos
+  (curva mais próxima a 0,1m do lote). Útil de forma geral, mas ACABOU NÃO
+  SENDO NECESSÁRIO pro cálculo final (ver abaixo).
+- **KML AIPBH** (as 38 áreas com `COTA_ALTIMETRICA_MAXIMA`, do CINDACTA 1):
+  real e oficial, mas SOZINHO pode SUPERESTIMAR a altura permitida — no
+  lote de teste deu 75m (875−800) contra o valor real de 29m do IBED. Existe
+  uma segunda restrição (superfícies clássicas) que pode ser mais restritiva
+  e não está no KML. Não usado como fonte final por causa disso.
+- **A SOLUÇÃO**: achada explorando o WMS do visualizador antigo
+  (webmapsiurbe.pbh.gov.br/geosiurbe) — a camada
+  **`pbh_geosiurbe:BHMAP_ALTIMETRIA`** (WFS, 400k+ feições, uma por lote da
+  Planta de Parcelamento/LOTE_CP) guarda o HISTÓRICO da altura já liberada
+  por lote, com um campo por período (`LOTE_CP_ALT_14102015`, `_30092018`,
+  `_31082020`, `_21102020`, `_03012021`, `_05012023`, `_22012024`) mais um
+  campo "atual" — cujo nome real na camada é, confusamente, **`LOTE_CP`**
+  (mesmo nome usado como código de lote em outras camadas do mesmo
+  workspace — armadilha real, um regex ingênuo de substring pega o campo
+  errado; `engine/cindacta.py` usa regex de tag EXATA pra evitar isso).
+  Validado: os 7 primeiros valores bateram, na mesma ordem, com o popup
+  "Informações do Mapa" que o Arthur tirou manualmente pro mesmo lote.
+- **Os valores da camada JÁ SÃO a altura em metros** (não uma cota a
+  subtrair do terreno) — confirmado batendo com o período vigente até
+  18/01/2024 = 29, igual ao "Altura máxima: 29m" do IBED daquele período.
+- **DECISÃO SOBRE A DIVERGÊNCIA 29 vs 75** (o IBED de 21/10/2024 mostra 29,
+  a camada mostra "atual desde 19/01/2024" = 75): quem decide essa restrição
+  é o CINDACTA, não a PBH — a camada é o histórico das próprias mudanças do
+  CINDACTA ao longo do tempo, e o valor "atual" É o registro mais recente
+  dessa mudança. A IBED (sistema de geração automática da PBH) é quem está
+  desatualizada, não o contrário — mesmo sendo gerada depois, no calendário,
+  do que a mudança de 19/01/2024. CONCLUSÃO: o valor mais recente da série
+  (`LOTE_CP`/"atual") é tratado como principal; o valor anterior aparece
+  menor, com nota explícita de que a IBED da PBH pode estar desatualizada.
+- **Arquitetura**: `engine/cindacta.py` consulta o WFS AO VIVO por ponto
+  (bbox pequeno ~2m ao redor da coordenada), não baixa as 400 mil feições —
+  mesmo padrão já usado pra geocodificação via Mapbox (dependência externa
+  aceita, com timeout curto de 6s e falha honesta). **ARMADILHA**: essa
+  consulta NÃO pode entrar dentro de `consultar()` (o motor principal) —
+  `consultar()` é rechamado a cada drag do slider de altura no anexo
+  interativo (`_calcular_desenho` → `res=None` → rechama `consultar()`), e
+  isso tornaria o slider lento a cada movimento. A consulta ao CINDACTA é
+  feita 1x só, direto na rota `/consulta`, separada do motor.
+- **3 estados tratados na ficha e no veredito** (`_montar_cindacta` +
+  `_montar_veredito` em app.py): (a) restrição encontrada — mostra valor
+  atual grande + anterior menor com aviso de desatualização; entra como
+  "verificado" no topo; (b) sem restrição no ponto (a maior parte de BH,
+  fora do raio de influência) — nada aparece, silêncio é a resposta certa;
+  (c) serviço da PBH fora do ar — cai em "não verificado", nunca quebra a
+  ficha. **A altimetria SÓ zera o veredito ("não pode construir") quando
+  ≤ 3m** (mesmo piso mínimo usado em `desenho_lote.calcular_altura_maxima`,
+  h_min=3.0) — pedido explícito do Arthur pra não ser alarmista sem motivo.
+- Caso de regressão travado em `tests/regressao_lotes.py` (Carmelo 93:
+  atual 75m, anterior 29m) — depende de rede; se a PBH atualizar a série
+  (novo período), o teste vai falhar e precisa ajuste (não é bug).
+
 ## Roteiro
 - Fase 1.5 (ATUAL): geocodificação endereço→lat/lon + bateria de testes com os
   endereços de resposta conhecida do Arthur. GATE: só ir p/ fase 2 se bater.
