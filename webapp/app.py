@@ -405,11 +405,10 @@ def _montar_veredito(res: dict, cindacta: dict | None = None) -> dict | None:
         if "não verificad" not in alerta:
             atencoes.append(alerta)
 
-    nao_verificado = [
-        "Área de Preservação Permanente (APP) e meio ambiente",
-        "Patrimônio cultural (tombamentos e proteção)",
-    ]
-    nao_verificado += [a.rstrip(".") for a in res.get("alertas", []) if "não verificad" in a]
+    # APP e patrimônio cultural SÃO verificados desde 07/2026 (camadas do
+    # BHMAP) — saíram da lista de "não verificado"; viram atenção quando
+    # incidem (o alerta correspondente já entrou em `atencoes` acima).
+    nao_verificado = [a.rstrip(".") for a in res.get("alertas", []) if "não verificad" in a]
 
     verificado = []
     if ca_bas is not None:
@@ -421,6 +420,10 @@ def _montar_veredito(res: dict, cindacta: dict | None = None) -> dict | None:
         verificado.append(
             f"Ocupação máxima de {to_pct:g}% e permeabilidade mínima de {tp_pct:g}% do terreno."
         )
+    if not res.get("protecao_cultural"):
+        verificado.append("Sem área de proteção cultural (IPHAN, IEPHA ou CDPCM-BH) incidindo no lote.")
+    if not res.get("app"):
+        verificado.append("Sem Área de Preservação Permanente (APP) atingindo o lote.")
 
     # CINDACTA: única restrição capaz de zerar a construção (altura ≤ ~3m,
     # o mínimo pra qualquer pavimento útil — mesmo piso usado no motor do

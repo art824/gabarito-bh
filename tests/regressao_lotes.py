@@ -44,6 +44,16 @@ CASOS = [
         # batendo com o popup do BHMap em 21/07/2026. Se a PBH atualizar a
         # série (novo período), este caso vai falhar — é esperado, ajustar.
         "cindacta_esperado": {"atual_m": 75.0, "anterior_m": 29.0},
+        # IBED declara "Não" para as 3 esferas de proteção cultural e para APP
+        "esperado_listas_vazias": ["protecao_cultural", "app"],
+    },
+    {
+        "nome": "Orla da Pampulha — tombamento nas 3 esferas (IPHAN + IEPHA + CDPCM)",
+        "latlon": (-19.8557, -43.9797),
+        "esperado": {},
+        # conjunto tombado pelo IPHAN e Patrimônio Mundial UNESCO — as 3
+        # esferas têm que aparecer; se alguma sumir, camada quebrou
+        "esferas_protecao_esperadas": ["Federal (IPHAN)", "Estadual (IEPHA)", "Municipal (CDPCM-BH)"],
     },
     {
         "nome": "Esquina Conselheiro Saraiva × Contria — 2 testadas LOCAL (AF 3m cada)",
@@ -117,6 +127,23 @@ def main():
             print(f"  [{status}] {nome} :: area_ctm ≈ {alvo:g} m² (±{tol:.0%}) = {area!r}")
             if not ok:
                 falhas.append((nome, "area_ctm", alvo, area))
+
+        for campo in caso.get("esperado_listas_vazias", []):
+            valor = res.get(campo)
+            ok = not valor
+            status = "ok  " if ok else "FALHA"
+            print(f"  [{status}] {nome} :: {campo} vazio = {valor!r}")
+            if not ok:
+                falhas.append((nome, campo, [], valor))
+
+        if "esferas_protecao_esperadas" in caso:
+            obtidas = {p["esfera"] for p in res.get("protecao_cultural", [])}
+            for esfera in caso["esferas_protecao_esperadas"]:
+                ok = esfera in obtidas
+                status = "ok  " if ok else "FALHA"
+                print(f"  [{status}] {nome} :: proteção {esfera} presente")
+                if not ok:
+                    falhas.append((nome, f"protecao {esfera}", True, False))
 
         if "cindacta_esperado" in caso:
             ponto = gpd.GeoSeries([Point(lon, lat)], crs="EPSG:4326").to_crs(CRS_DADOS).iloc[0]

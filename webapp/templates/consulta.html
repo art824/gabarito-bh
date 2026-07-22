@@ -256,50 +256,113 @@
       </details>
     </section>
 
-    {% if veredito %}
-    <div class="veredito veredito-{{ veredito.estado }}">
-      <div class="veredito-topo">
-        <span class="veredito-selo">{{ '✓' if veredito.estado == 'sim' else '!' }}</span>
-        <div>
-          <p class="veredito-titulo">{{ veredito.titulo }}</p>
-          <p class="veredito-sub">{{ veredito.subtitulo }}</p>
+    {% set ns.sec = ns.sec + 1 %}
+    <section class="fsec">
+      <header class="fsec-cab">
+        <span class="num">0{{ ns.sec }}</span>
+        <h3>Proteção cultural e ambiental</h3>
+        <span class="fonte mono">IPHAN · IEPHA · CDPCM-BH · APP</span>
+      </header>
+      <div class="celulas">
+        {% set esferas = [('Federal (IPHAN)', 'Proteção federal'), ('Estadual (IEPHA)', 'Proteção estadual'), ('Municipal (CDPCM-BH)', 'Proteção municipal')] %}
+        {% for chave, rotulo in esferas %}
+        {% set incidentes = resultado.protecao_cultural | selectattr('esfera', 'equalto', chave) | list %}
+        <div class="cel cel-2">
+          <span class="k">{{ rotulo }}</span>
+          <span class="v">{{ 'Sim' if incidentes else 'Não' }}</span>
+          {% if incidentes %}
+          <span class="sub">{% for i in incidentes %}{{ i.nome }}{% if i.tipo and i.tipo not in i.nome %} <i>({{ i.tipo }})</i>{% endif %}{% if not loop.last %}<br>{% endif %}{% endfor %}</span>
+          {% endif %}
         </div>
+        {% endfor %}
+
+        <div class="cel cel-full {{ 'cel-aviso' if resultado.app else '' }}">
+          <span class="k">Área de Preservação Permanente (APP)</span>
+          <span class="v">{% if resultado.app %}Sim — {{ resultado.app | map(attribute='classificacao') | join(' · ') }}{% else %}Não atingido{% endif %}</span>
+          {% if resultado.app %}
+          <span class="sub">A APP é não edificável: reduz a área aproveitável do lote e exige análise ambiental no licenciamento. O limite exato deve ser conferido em levantamento topográfico.</span>
+          {% endif %}
+        </div>
+
+        {% if resultado.protecao_cultural %}
+        <div class="cel cel-full cel-aviso">⚠ Lote em área de proteção cultural — há diretrizes próprias de altimetria, afastamento e tratamento de fachada que prevalecem sobre a regra geral, e o licenciamento passa pelo órgão de patrimônio. Confirme as diretrizes específicas do perímetro.</div>
+        {% endif %}
+      </div>
+
+      <details class="fsec-fontes">
+        <summary><span class="fsec-fontes-btn">De onde vêm estes dados?</span></summary>
+        <ul>
+          <li><b>Proteção federal</b> — camada AREA_PROTECAO_CULTURAL_IPHAN (BHMAP): perímetros de tombamento e áreas envoltórias do IPHAN.</li>
+          <li><b>Proteção estadual</b> — camada AREA_PROTECAO_CULTURAL_IEPHA (BHMAP): perímetros e áreas envoltórias do IEPHA-MG.</li>
+          <li><b>Proteção municipal</b> — camada AREA_PROTECAO_CULTURAL_CDPCM-BH (BHMAP): conjuntos urbanos e paisagísticos protegidos (ou em estudo) pelo Conselho Deliberativo do Patrimônio Cultural do Município.</li>
+          <li><b>APP</b> — camada AREA_PRESERVACAO_PERMANENTE (BHMAP), classificada por origem (curso d'água, nascente, brejo, declividade).</li>
+          <li><b>Como é verificado</b> — cruzamento com o <b>polígono do lote</b> (CTM) quando ele foi identificado, não apenas com o ponto do endereço; assim uma área que pega só parte do terreno também é detectada.</li>
+        </ul>
+      </details>
+    </section>
+
+    {% if veredito %}
+    {% set ns.sec = ns.sec + 1 %}
+    <section class="fsec">
+      <header class="fsec-cab">
+        <span class="num">0{{ ns.sec }}</span>
+        <h3>Síntese e restrição aeronáutica</h3>
+        <span class="fonte mono">CINDACTA 1</span>
+      </header>
+
+      <div class="veredito veredito-{{ veredito.estado }}">
+        <div class="veredito-topo">
+          <span class="veredito-selo">{{ '✓' if veredito.estado == 'sim' else '!' }}</span>
+          <div>
+            <p class="veredito-titulo">{{ veredito.titulo }}</p>
+            <p class="veredito-sub">{{ veredito.subtitulo }}</p>
+          </div>
+        </div>
+
+        {% if cindacta and cindacta.disponivel %}
+        <div class="veredito-cindacta">
+          <p class="cindacta-titulo mono">Restrição aeronáutica · CINDACTA 1</p>
+          <div class="cindacta-valor">
+            <b>{{ '%g'|format(cindacta.atual_m) }}</b> <i class="mono">m de altura máxima</i>
+            <span class="cindacta-desde">vigente desde {{ cindacta.atual_desde }}</span>
+          </div>
+          {% if cindacta.desatualizado %}
+          <p class="cindacta-anterior">Valor anterior ({{ cindacta.anterior_periodo }}): <b>{{ '%g'|format(cindacta.anterior_m) }} m</b> — se a Informação Básica (IBED) que você tirou na PBH mostra esse número, ela ainda não foi atualizada com a mudança mais recente do CINDACTA.</p>
+          {% endif %}
+        </div>
+        {% elif cindacta and cindacta.disponivel is none %}
+        <p class="cindacta-indisponivel">⚠ Não foi possível consultar agora a restrição aeronáutica (CINDACTA) — o serviço da PBH pode estar fora do ar. Recarregue a página em alguns instantes.</p>
+        {% endif %}
+
+        <details class="veredito-mais">
+          <summary>Ver o que foi verificado e o que não foi</summary>
+          <div class="veredito-corpo">
+            {% for v in veredito.verificado %}
+            <p class="veredito-ok">✓ {{ v }}</p>
+            {% endfor %}
+            {% for a in veredito.atencoes %}
+            <p class="vd-item-atencao">⚠ {{ a }}</p>
+            {% endfor %}
+            {% if veredito.nao_verificado %}
+            <p class="veredito-nv"><b>Não verificado por esta ficha:</b> {{ veredito.nao_verificado|join(' · ') }}.</p>
+            {% endif %}
+            {% if cindacta and cindacta.disponivel %}
+            <p class="cindacta-aviso">O Gabarito não se responsabiliza pelo valor do CINDACTA acima — é a leitura mais recente do cadastro público da PBH sobre a determinação do CINDACTA, consultada ao vivo no momento desta busca. Confirme diretamente com o CINDACTA 1 antes de projetar.</p>
+            {% endif %}
+          </div>
+        </details>
       </div>
 
       {% if cindacta and cindacta.disponivel %}
-      <div class="veredito-cindacta">
-        <p class="cindacta-titulo mono">Restrição aeronáutica · CINDACTA 1</p>
-        <div class="cindacta-valor">
-          <b>{{ '%g'|format(cindacta.atual_m) }}</b> <i class="mono">m de altura máxima</i>
-          <span class="cindacta-desde">vigente desde {{ cindacta.atual_desde }}</span>
-        </div>
-        {% if cindacta.desatualizado %}
-        <p class="cindacta-anterior">Valor anterior ({{ cindacta.anterior_periodo }}): <b>{{ '%g'|format(cindacta.anterior_m) }} m</b> — se a Informação Básica (IBED) que você tirou na PBH mostra esse número, ela ainda não foi atualizada com a mudança mais recente do CINDACTA.</p>
-        {% endif %}
-      </div>
-      {% elif cindacta and cindacta.disponivel is none %}
-      <p class="cindacta-indisponivel">⚠ Não foi possível consultar agora a restrição aeronáutica (CINDACTA) — o serviço da PBH pode estar fora do ar. Recarregue a página em alguns instantes.</p>
-      {% endif %}
-
-      <details class="veredito-mais">
-        <summary>Ver o que foi verificado e o que não foi</summary>
-        <div class="veredito-corpo">
-          {% for v in veredito.verificado %}
-          <p class="veredito-ok">✓ {{ v }}</p>
-          {% endfor %}
-          {% for a in veredito.atencoes %}
-          <p class="vd-item-atencao">⚠ {{ a }}</p>
-          {% endfor %}
-          {% if veredito.nao_verificado %}
-          <p class="veredito-nv"><b>Não verificado por esta ficha:</b> {{ veredito.nao_verificado|join(' · ') }}.</p>
-          {% endif %}
-          {% if cindacta and cindacta.disponivel %}
-          <p class="cindacta-aviso">O Gabarito não se responsabiliza pelo valor do CINDACTA acima — é a leitura mais recente do cadastro público da PBH sobre a determinação do CINDACTA, consultada ao vivo no momento desta busca. Confirme diretamente com o CINDACTA 1 antes de projetar.</p>
-          <p class="veredito-fonte-cindacta">Fonte CINDACTA: camada <b>BHMAP_ALTIMETRIA</b> (PBH, workspace geosiurbe) — histórico de altura liberada por lote. Consultada ao vivo (não é uma base baixada).</p>
-          {% endif %}
-        </div>
+      <details class="fsec-fontes">
+        <summary><span class="fsec-fontes-btn">De onde vêm estes dados?</span></summary>
+        <ul>
+          <li><b>Altura máxima (CINDACTA)</b> — camada BHMAP_ALTIMETRIA (PBH, workspace geosiurbe): histórico da altura liberada por lote, atualizado conforme decisões do CINDACTA 1. Consultada ao vivo, não é uma base baixada.</li>
+          <li><b>Síntese "pode construir"</b> — derivada dos dados desta ficha (coeficiente da zona, TP/TO e a própria altura do CINDACTA).</li>
+        </ul>
       </details>
-    </div>
+      {% endif %}
+    </section>
     {% endif %}
 
     {% set ns.sec = ns.sec + 1 %}

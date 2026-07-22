@@ -87,6 +87,12 @@ def carregar_camadas():
     extras["bairro_oficial"] = _cache_ou_none("BAIRRO_OFICIAL.parquet")
     extras["bairro_popular"] = _cache_ou_none("BAIRRO_POPULAR.parquet")
     extras["proj_viario"] = _cache_ou_none("PROJ_VIARIO_PRIOR.parquet")
+    # proteção cultural (3 esferas) e APP — shapefiles convertidos por
+    # scripts/preparar_dados.py:shp_parquet (encoding do .dbf corrigido lá)
+    extras["prot_iphan"] = _cache_ou_none("PROTECAO_CULTURAL_IPHAN.parquet")
+    extras["prot_iepha"] = _cache_ou_none("PROTECAO_CULTURAL_IEPHA.parquet")
+    extras["prot_cdpcm"] = _cache_ou_none("PROTECAO_CULTURAL_CDPCM.parquet")
+    extras["app"] = _cache_ou_none("APP.parquet")
 
     return zon, ade, via, extras
 
@@ -257,12 +263,13 @@ def consultar(lat: float, lon: float, zon, ade, via, extras=None) -> dict:
     # 3b. Lote real (CTM): área, testadas por rua confrontante, Centralidade
     # Local, Conexão Verde e proximidade de recuo de alinhamento
     r["lote_real"] = None
+    poly_lote = None  # guardado pro passo 3c (proteção cultural / APP)
     if extras and extras.get("lote_ctm") is not None:
         achado = localizar_lote(ponto, extras["lote_ctm"])
         if achado is None:
             r["alertas"].append("Lote não identificado com confiança na base cadastral (CTM) — testada e área do estudo interativo ficam manuais.")
         else:
-            poly = achado["poly"]
+            poly = poly_lote = achado["poly"]
             testada_info = calcular_testadas(poly, via)
             area_oficial = achado["row"].get("AREA_M2")
             lote_real = {
@@ -291,6 +298,47 @@ def consultar(lat: float, lon: float, zon, ade, via, extras=None) -> dict:
                 f"Lote próximo a trecho com previsão de recuo de alinhamento "
                 f"(largura final prevista: {largura} m) — conferir Planta de Parcelamento."
             )
+
+    # 3c. Proteção cultural (federal/estadual/municipal) e APP.
+    # Usa o POLÍGONO do lote quando ele foi identificado (uma APP ou um
+    # perímetro de tombamento pode pegar só parte do terreno e ainda assim
+    # incidir — é como o SIURBE reporta, "lote inserido em"); cai pro ponto
+    # quando não há lote confiável.
+    alvo = poly_lote if poly_lote is not None else ponto
+    r["protecao_cultural"] = []
+    r["app"] = []
+    if extras:
+        for chave, esfera in (("prot_iphan", "Federal (IPHAN)"),
+                              ("prot_iepha", "Estadual (IEPHA)"),
+                              ("prot_cdpcm", "Municipal (CDPCM-BH)")):
+            camada = extras.get(chave)
+            if camada is None or camada.empty:
+                continue
+            for _, linha in camada[camada.intersects(alvo)].iterrows():
+                r["protecao_cultural"].append({
+                    "esfera": esfera,
+                    "tipo": linha.get("DESC_TIPO_"),
+                    "nome": linha.get("NOME_AREA_"),
+                })
+        app = extras.get("app")
+        if app is not None and not app.empty:
+            atingidas = app[app.intersects(alvo)]
+            # agrupa por classificação (um lote pode cruzar vários polígonos
+            # da mesma classe — ex. dois trechos de curso d'água)
+            for classe in sorted(set(atingidas["CLASSIFICA"].dropna())):
+                r["app"].append({"classificacao": classe})
+
+    if r["protecao_cultural"]:
+        r["alertas"].append(
+            "Lote em área de proteção cultural — há diretrizes específicas de "
+            "altimetria, afastamento e fachada que prevalecem sobre a regra geral; "
+            "o licenciamento passa pelo órgão de patrimônio."
+        )
+    if r["app"]:
+        r["alertas"].append(
+            "Lote atingido por Área de Preservação Permanente (APP) — a APP é "
+            "não edificável e reduz a área aproveitável; exige análise ambiental."
+        )
 
     # 4. Parâmetros pela sigla
     ca = json.loads((PARAMS / "ca_quota.json").read_text(encoding="utf-8"))

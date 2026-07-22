@@ -38,6 +38,73 @@ def geo_parquet(csv_nome: str, saida_nome: str, colunas: list[str] | None = None
     print(f"  {csv_nome} -> {saida_nome}: {len(gdf)} linhas em {time.time()-t0:.1f}s")
 
 
+def _ler_dbf_latin1(caminho_dbf: Path) -> pd.DataFrame:
+    """Lê os ATRIBUTOS de um .dbf decodificando em latin-1 na mão.
+
+    Por que não usar geopandas/pyogrio: nesses shapefiles do BHMAP o byte 29
+    do header do .dbf (LDID, "language driver id") é 0x00 — ou seja, o
+    arquivo NÃO declara seu encoding. Nessa situação o GDAL ignora tanto o
+    arquivo .cst irmão (que diz ISO-8859-1) quanto o parâmetro `encoding=`
+    do read_file, e devolve os acentos como U+FFFD (caractere de
+    substituição), o que é IRREVERSÍVEL depois de lido. Os bytes no disco
+    estão corretos (`Per\\xedmetro` = latin-1 válido) — só precisam ser
+    decodificados direto. Formato DBF3 é simples e estável, daí o parser.
+    """
+    import struct
+    raw = caminho_dbf.read_bytes()
+    n_registros = struct.unpack("<I", raw[4:8])[0]
+    tam_header = struct.unpack("<H", raw[8:10])[0]
+    tam_registro = struct.unpack("<H", raw[10:12])[0]
+
+    campos, pos = [], 32
+    while raw[pos] != 0x0D:  # 0x0D encerra a lista de descritores de campo
+        nome = raw[pos:pos + 11].split(b"\x00")[0].decode("latin-1")
+        tipo = chr(raw[pos + 11])
+        tamanho = raw[pos + 16]
+        campos.append((nome, tipo, tamanho))
+        pos += 32
+
+    linhas = []
+    for i in range(n_registros):
+        ini = tam_header + i * tam_registro
+        registro = raw[ini:ini + tam_registro]
+        if not registro:
+            break
+        valores, p = {}, 1  # byte 0 = flag de exclusão
+        for nome, tipo, tamanho in campos:
+            texto = registro[p:p + tamanho].decode("latin-1").strip()
+            p += tamanho
+            if tipo in "NF":
+                valores[nome] = float(texto) if texto else None
+            else:
+                valores[nome] = texto or None
+        linhas.append(valores)
+    return pd.DataFrame(linhas)
+
+
+def shp_parquet(pasta_nome: str, saida_nome: str):
+    """Converte um shapefile do BHMAP para Parquet corrigindo o encoding dos
+    atributos (ver _ler_dbf_latin1). A GEOMETRIA vem do geopandas (essa parte
+    o GDAL lê certo); só os textos são relidos do .dbf."""
+    origem = GEO / pasta_nome / f"{pasta_nome}.shp"
+    if not origem.exists():
+        print(f"  PULADO — {pasta_nome}.shp não encontrado em data/geo/{pasta_nome}/")
+        return
+    t0 = time.time()
+    gdf = gpd.read_file(origem)
+    atributos = _ler_dbf_latin1(origem.with_suffix(".dbf"))
+    if len(atributos) == len(gdf):
+        for coluna in atributos.columns:
+            if coluna in gdf.columns:
+                gdf[coluna] = atributos[coluna].values
+    else:  # contagem divergente (registros excluídos?) — não arrisca casar errado
+        print(f"  AVISO — {pasta_nome}: {len(atributos)} linhas no .dbf vs "
+              f"{len(gdf)} no shapefile; mantendo atributos do GDAL (acentos podem sair errados)")
+    gdf = gdf.set_crs(CRS, allow_override=True)
+    gdf.to_parquet(CACHE / saida_nome)
+    print(f"  {pasta_nome} -> {saida_nome}: {len(gdf)} feições em {time.time()-t0:.1f}s")
+
+
 def indice_cadastral_parquet():
     origem = GEO / "CADASTRO_IMOBILIARIO.csv"
     if not origem.exists():
@@ -116,6 +183,12 @@ if __name__ == "__main__":
     geo_parquet("BAIRRO_OFICIAL.csv", "BAIRRO_OFICIAL.parquet")
     geo_parquet("BAIRRO_POPULAR.csv", "BAIRRO_POPULAR.parquet")
     geo_parquet("PROJ_VIARIO_PRIOR_11181.csv", "PROJ_VIARIO_PRIOR.parquet")
+
+    # shapefiles (encoding do .dbf corrigido na conversão — ver shp_parquet)
+    shp_parquet("AREA_PROTECAO_CULTURAL_IPHAN", "PROTECAO_CULTURAL_IPHAN.parquet")
+    shp_parquet("AREA_PROTECAO_CULTURAL_IEPHA", "PROTECAO_CULTURAL_IEPHA.parquet")
+    shp_parquet("AREA_PROTECAO_CULTURAL_CDPCM-BH", "PROTECAO_CULTURAL_CDPCM.parquet")
+    shp_parquet("AREA_PRESERVACAO_PERMANENTE", "APP.parquet")
     indice_cadastral_parquet()
     construir_db_lotes()
     construir_db_indice()

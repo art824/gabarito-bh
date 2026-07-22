@@ -1466,11 +1466,12 @@ input[type="range"]::-moz-range-thumb {
   .carregando-spinner { animation: none; }
 }
 
-/* veredito "pode construir?" — PRIMEIRA coisa da ficha, verde e enxuto (K2) */
+/* veredito "pode construir?" — vive DENTRO da seção numerada "Síntese e
+   restrição aeronáutica", alinhado às margens das outras seções da ficha */
 .veredito {
   border: 2px solid;
   padding: 16px 20px;
-  margin: 0 0 22px;
+  margin: 14px 22px 0;
   border-radius: 3px;
 }
 .veredito-sim     { background: #EAF3EC; border-color: #3E6B4F; }
