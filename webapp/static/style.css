@@ -1321,8 +1321,8 @@ input[type="range"]::-moz-range-thumb {
    .potencial-quadro é o "quadrado maior" — mesma borda das outras seções
    (.celulas), pra manter a linguagem visual coesa na ficha inteira. */
 .potencial-quadro {
-  margin: 0 22px;
   border: 1.5px solid var(--tinta);
+  border-top: none; /* .fsec-cab já dá a borda de cima — evita linha dupla */
   background: var(--papel-vivo);
   padding: 18px 0 14px;
 }
@@ -1470,9 +1470,10 @@ input[type="range"]::-moz-range-thumb {
   animation: carregando-girar .8s linear infinite;
 }
 @keyframes carregando-girar { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) {
-  .carregando-spinner { animation: none; }
-}
+/* NÃO desligar em prefers-reduced-motion: o spinner comunica um estado real
+   (a busca está processando), não é decoração — desligar deixaria a tela de
+   carregamento parecendo travada pra quem tem essa preferência do sistema
+   ligada (mesmo princípio já aplicado ao mapa vivo e ao carrossel da ficha). */
 
 /* veredito "pode construir?" — vive DENTRO da seção numerada "Síntese e
    restrição aeronáutica", alinhado às margens das outras seções da ficha */
