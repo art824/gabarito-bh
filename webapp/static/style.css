@@ -1317,7 +1317,15 @@ input[type="range"]::-moz-range-thumb {
 .lote-esquina-tag { padding-top: 4px; padding-bottom: 4px; }
 
 /* potencial construtivo — gráfico comparando CA básico × máximo (K2).
-   Estático (renderizado no servidor): a área é dado do lote, não interativa. */
+   Estático (renderizado no servidor): a área é dado do lote, não interativa.
+   .potencial-quadro é o "quadrado maior" — mesma borda das outras seções
+   (.celulas), pra manter a linguagem visual coesa na ficha inteira. */
+.potencial-quadro {
+  margin: 0 22px;
+  border: 1.5px solid var(--tinta);
+  background: var(--papel-vivo);
+  padding: 18px 0 14px;
+}
 .potencial-corpo {
   padding: 4px 22px 0;
   display: grid; grid-template-columns: 260px 1fr; gap: 24px; align-items: center;

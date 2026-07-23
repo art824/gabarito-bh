@@ -301,64 +301,49 @@
       </details>
     </section>
 
-    {% if veredito %}
+    {% if cindacta %}
     {% set ns.sec = ns.sec + 1 %}
     <section class="fsec">
       <header class="fsec-cab">
         <span class="num">0{{ ns.sec }}</span>
-        <h3>Síntese e restrição aeronáutica</h3>
+        <h3>Restrição aeronáutica</h3>
         <span class="fonte mono">CINDACTA 1</span>
       </header>
-
-      <div class="veredito veredito-{{ veredito.estado }}">
-        <div class="veredito-topo">
-          <span class="veredito-selo">{{ '✓' if veredito.estado == 'sim' else '!' }}</span>
-          <div>
-            <p class="veredito-titulo">{{ veredito.titulo }}</p>
-            <p class="veredito-sub">{{ veredito.subtitulo }}</p>
-          </div>
+      <div class="celulas">
+        {% if cindacta.disponivel %}
+        <div class="cel cel-3">
+          <span class="k">Altura máxima liberada</span>
+          <span class="v vnum">{{ '%g'|format(cindacta.atual_m) }} <i>m</i></span>
+          <span class="sub">vigente desde {{ cindacta.atual_desde }}</span>
         </div>
-
-        {% if cindacta and cindacta.disponivel %}
-        <div class="veredito-cindacta">
-          <p class="cindacta-titulo mono">Restrição aeronáutica · CINDACTA 1</p>
-          <div class="cindacta-valor">
-            <b>{{ '%g'|format(cindacta.atual_m) }}</b> <i class="mono">m de altura máxima</i>
-            <span class="cindacta-desde">vigente desde {{ cindacta.atual_desde }}</span>
-          </div>
-          {% if cindacta.desatualizado %}
-          <p class="cindacta-anterior">Valor anterior ({{ cindacta.anterior_periodo }}): <b>{{ '%g'|format(cindacta.anterior_m) }} m</b> — se a Informação Básica (IBED) que você tirou na PBH mostra esse número, ela ainda não foi atualizada com a mudança mais recente do CINDACTA.</p>
-          {% endif %}
+        {% if cindacta.desatualizado %}
+        <div class="cel cel-3">
+          <span class="k">Valor anterior</span>
+          <span class="v vnum">{{ '%g'|format(cindacta.anterior_m) }} <i>m</i></span>
+          <span class="sub">{{ cindacta.anterior_periodo }} — se a Informação Básica (IBED) da PBH mostra esse número, ela ainda não foi atualizada com a mudança mais recente do CINDACTA.</span>
         </div>
-        {% elif cindacta and cindacta.disponivel is none %}
-        <p class="cindacta-indisponivel">⚠ Não foi possível consultar agora a restrição aeronáutica (CINDACTA) — o serviço da PBH pode estar fora do ar. Recarregue a página em alguns instantes.</p>
         {% endif %}
-
-        <details class="veredito-mais">
-          <summary>Ver o que foi verificado e o que não foi</summary>
-          <div class="veredito-corpo">
-            {% for v in veredito.verificado %}
-            <p class="veredito-ok">✓ {{ v }}</p>
-            {% endfor %}
-            {% for a in veredito.atencoes %}
-            <p class="vd-item-atencao">⚠ {{ a }}</p>
-            {% endfor %}
-            {% if veredito.nao_verificado %}
-            <p class="veredito-nv"><b>Não verificado por esta ficha:</b> {{ veredito.nao_verificado|join(' · ') }}.</p>
-            {% endif %}
-            {% if cindacta and cindacta.disponivel %}
-            <p class="cindacta-aviso">O Gabarito não se responsabiliza pelo valor do CINDACTA acima — é a leitura mais recente do cadastro público da PBH sobre a determinação do CINDACTA, consultada ao vivo no momento desta busca. Confirme diretamente com o CINDACTA 1 antes de projetar.</p>
-            {% endif %}
-          </div>
-        </details>
+        {% if cindacta.atual_m <= 3 %}
+        <div class="cel cel-full cel-aviso">⚠ Altura liberada insuficiente para edificação (mínimo prático de 3 m) — construção não é viável sob esta restrição.</div>
+        {% endif %}
+        <div class="cel cel-full">
+          <span class="sub">O Gabarito não se responsabiliza por este valor — é a leitura mais recente do cadastro público da PBH sobre a determinação do CINDACTA, consultada ao vivo no momento desta busca. Confirme diretamente com o CINDACTA 1 antes de projetar.</span>
+        </div>
+        {% elif cindacta.disponivel is none %}
+        <div class="cel cel-full cel-aviso">⚠ Não foi possível consultar agora a restrição aeronáutica (CINDACTA) — o serviço da PBH pode estar fora do ar. Recarregue a página em alguns instantes.</div>
+        {% else %}
+        <div class="cel cel-full">
+          <span class="v">Sem restrição registrada</span>
+          <span class="sub">Nenhuma restrição de altura por proteção aeronáutica (CINDACTA) foi encontrada para este ponto.</span>
+        </div>
+        {% endif %}
       </div>
 
-      {% if cindacta and cindacta.disponivel %}
+      {% if cindacta.disponivel %}
       <details class="fsec-fontes">
         <summary><span class="fsec-fontes-btn">De onde vêm estes dados?</span></summary>
         <ul>
           <li><b>Altura máxima (CINDACTA)</b> — camada BHMAP_ALTIMETRIA (PBH, workspace geosiurbe): histórico da altura liberada por lote, atualizado conforme decisões do CINDACTA 1. Consultada ao vivo, não é uma base baixada.</li>
-          <li><b>Síntese "pode construir"</b> — derivada dos dados desta ficha (coeficiente da zona, TP/TO e a própria altura do CINDACTA).</li>
         </ul>
       </details>
       {% endif %}
@@ -450,6 +435,7 @@
         <span class="fonte mono">Quanto dá pra construir</span>
       </header>
 
+      <div class="potencial-quadro">
       <div class="potencial-corpo">
         <div class="pot-grafico">
           <svg viewBox="0 0 300 290" xmlns="http://www.w3.org/2000/svg" aria-label="Comparação entre coeficiente básico e máximo">
@@ -527,6 +513,7 @@
       </div>
 
       <p class="pot-aviso">Potencial teórico pelo coeficiente da zona{% if potencial.area %} e pela área do lote{% endif %}. O que cabe de fato depende de afastamentos, permeabilidade e altura — veja no estudo interativo abaixo.</p>
+      </div>
 
       <details class="fsec-fontes">
         <summary><span class="fsec-fontes-btn">De onde vêm estes dados?</span></summary>
