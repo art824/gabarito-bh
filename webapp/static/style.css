@@ -477,6 +477,18 @@ footer .legal {
   font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em;
   color: var(--grafite);
 }
+.legal a { color: var(--grafite); text-decoration: underline; text-underline-offset: 2px; }
+.legal a:hover { color: var(--terra); }
+
+.footer-feedback {
+  max-width: 480px; margin: 0 auto 22px;
+  text-align: center;
+  padding: 18px 20px;
+  border: 1px dashed var(--linha, #C9C2B0);
+}
+.footer-feedback p {
+  font-size: 12.5px; color: var(--tinta-2); margin: 0 0 12px; line-height: 1.4;
+}
 
 /* ---------- Mobile ---------- */
 @media (max-width: 900px) {
@@ -1207,6 +1219,14 @@ input[type="range"]::-moz-range-thumb {
   color: var(--tinta);
 }
 .fsec-cab .fonte { margin-left: auto; font-size: 9.5px; color: var(--grafite); }
+
+/* selo BETA — recurso em desenvolvimento, avisa sem parecer um erro */
+.selo-beta {
+  font-size: 9px; font-weight: 700; letter-spacing: .1em;
+  color: #fff; background: var(--terra);
+  padding: 2px 7px; border-radius: 2px;
+  line-height: 1.4;
+}
 
 /* subtítulo de um "bloco dentro do bloco" — ex. Edificação existente
    dentro da seção 01. Um degrau abaixo do h3 de seção (sem número, sem

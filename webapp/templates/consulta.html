@@ -534,10 +534,12 @@
       <header class="fsec-cab">
         <span class="num">0{{ ns.sec }}</span>
         <h3>Estudo interativo</h3>
+        <span class="selo-beta mono" title="Recurso em desenvolvimento — pode conter imprecisões">BETA</span>
         <button type="button" class="info-btn" id="info-estudo-btn" aria-label="O que este estudo considera">i</button>
         <span class="fonte mono">Desenho em escala real</span>
         <div class="info-popover" id="info-estudo-popover" hidden>
           <button type="button" class="info-popover-fechar" data-fechar-info aria-label="Fechar">×</button>
+          <p><b>Este estudo é uma versão beta.</b> O desenho e os cálculos ainda estão em desenvolvimento e podem apresentar imprecisões — use como referência preliminar, não como projeto final.</p>
           {% if estudo.testada_real and estudo.area_real %}
           <p>Testada e área vêm do Cadastro Técnico Municipal — são dado do lote, não estimativa. O desenho usa um retângulo equivalente (testada × área ÷ testada), então lotes muito irregulares podem diferir do formato real.</p>
           {% endif %}
