@@ -1,4 +1,12 @@
-# Plano de ação — Gabarito (atualizado 20/07/2026)
+# Plano de ação — Gabarito (atualizado 03/08/2026)
+
+> **Estado em 03/08/2026:** site no ar e estável em
+> **https://gabaritoarq.com.br** (domínio próprio já propagado e com SSL) e
+> em gabarito-bh.onrender.com. Desde a última revisão deste plano entraram:
+> CINDACTA (Fase 4), Proteção cultural + APP (parte da Fase 5), selo BETA no
+> estudo interativo, botão de feedback e e-mail de contato no rodapé.
+> **Só resta 1 bug real conhecido** (relatos do botão "reportar desenho" se
+> perdem a cada deploy — ver item 2). O resto é evolução, não correção.
 
 Origem: entrevistas com K2 Arquitetura (mercado/profissional) e Soluz
 (estudante), mais decisões tomadas com o Arthur ao longo do deploy.
@@ -57,13 +65,16 @@ completos e as armadilhas encontradas estão no CLAUDE.md.
 interativo (item (d) do plano original) — ainda não feito.
 
 ### 2. Fechar as pontas do que já está no ar
-- **Domínio próprio** (`gabaritoarq.com.br`): DNS configurado no Registro.br,
-  aguardando propagação/certificado no Render. Conferir e, quando funcionar,
-  trocar o link divulgado.
-- **Bug real pendente:** o botão "reportar desenho" grava em arquivo local
-  (`data/relatos_desenho.jsonl`), e o disco do Render free é **apagado a cada
-  deploy** — relatos de usuários reais estão sendo perdidos em silêncio.
-  Precisa mandar para um destino persistente (e-mail, planilha ou banco).
+- ~~**Domínio próprio**~~ — **FEITO**: `gabaritoarq.com.br` no ar com SSL
+  (confirmado 03/08/2026). É o link a divulgar daqui pra frente.
+- **⚠ ÚNICO BUG REAL PENDENTE:** o botão "reportar desenho" (dentro do
+  estudo interativo) grava em `data/relatos_desenho.jsonl`, e o disco do
+  Render free é **apagado a cada deploy** — relatos de usuários reais estão
+  sendo perdidos em silêncio. Isso é crítico agora que o objetivo é
+  justamente COLETAR FEEDBACK. Opção mais simples: mandar o relato por
+  e-mail (mesmo destino do rodapé) ou gravar numa planilha/Formulário
+  Google via webhook. O botão do rodapé (mailto) não tem esse problema —
+  só o de dentro da ficha.
 - **Validar o PDF**: Arthur precisa abrir a ficha, dar Ctrl+P e conferir se a
   diagramação ficou digna do que será o recurso pago.
 - **Backup do `data/geo/`** (~1,6GB): só existe no PC do Arthur. Copiar pra
@@ -75,12 +86,14 @@ A cada IBED que o Arthur trouxer, virar um caso novo no
 silenciosamente um dado certo. Barato de fazer, alto retorno de confiança.
 
 ### 4. Fase 5 — dados novos
-- **APP / meio ambiente, patrimônio cultural, TCU** — a K2 disse que agregam
-  bastante e já aparecem no IBED. Verificar disponibilidade no BHMAP (o
-  patrimônio provavelmente é da DPCA-FMC, outro sistema) e integrar no mesmo
-  padrão: `preparar_dados.py` → ficha com origem.
+- ~~**APP / meio ambiente, patrimônio cultural**~~ — **FEITO (22/07/2026)**:
+  seção "Proteção cultural e ambiental" na ficha, com as 3 esferas de
+  tombamento (IPHAN federal, IEPHA estadual, CDPCM-BH municipal) e APP
+  classificada por origem. Cruzamento pelo POLÍGONO do lote, não só pelo
+  ponto. Camadas convertidas em `preparar_dados.py:shp_parquet()`.
 - **DWG por zona** (pedido da Soluz): investigar onde a PBH publica os DWGs.
   Mínimo viável: dizer NA FICHA em que zona o lote está; ideal: link direto.
+  **É o último pedido de entrevista que ainda não foi atendido.**
 
 ### 5. Melhorias de motor conhecidas (quando incomodarem)
 - Lotes muito irregulares (ex. Fernandes Tourinho 200) caem em "inconstruível"
