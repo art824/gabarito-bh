@@ -397,7 +397,16 @@
       var elDestaque = $("est-lat-destaque");
       if (elDestaque) elDestaque.textContent = fmtBR(d.lateral_m, 2);
 
-      if (d.altura_maxima) inH.max = d.altura_maxima;
+      /* área construtiva máxima nesta altura — o número que faltava: é o que
+         de fato sobra pra construir depois de afastamentos, TP e TO. Zera
+         quando a altura passa do ponto em que o lote não comporta mais nada,
+         e é isso que explica visualmente o teto do slider. */
+      var elArea = $("est-area-max");
+      if (elArea) {
+        var areaUtil = d.inconstruivel ? 0 : (d.mancha_area || 0);
+        elArea.textContent = fmtBR(areaUtil);
+        elArea.parentNode.classList.toggle("destaque-h-zero", areaUtil <= 0);
+      }
     }
 
     function atualizarNumerosEstaticos(area) {
@@ -418,8 +427,34 @@
          cada arrastada, só reaproveitar o valor. */
       var alturaMaximaConhecida = est.desenho_inicial.altura_maxima;
 
+      /* TETO DO SLIDER = o MAIOR entre:
+           (a) a altura em que a área construtiva zera (varredura do servidor);
+           (b) a altura máxima liberada pelo CINDACTA.
+         Usar o MAIOR (e não o menor) é decisão do Arthur, e tem motivo: o
+         algoritmo de recuo por aresta às vezes declara "inconstruível" cedo
+         demais em lotes muito irregulares (limitação conhecida, ver
+         CLAUDE.md) — travar no primeiro zero prendia o slider num valor
+         baixo e falso. Deixando ir até o CINDACTA, a pessoa continua vendo
+         "Área construtiva máx. = 0", que é honesto e auto-explicativo, em
+         vez de ficar sem poder mexer.
+         BUG QUE ISTO CORRIGE: renderizar() reescrevia inH.max a cada
+         resposta boa, desfazendo o teto assim que o usuário voltava pra
+         baixo — por isso a trava "não pegava". Agora o teto é calculado
+         UMA vez aqui e nunca é sobrescrito no render. */
+      var tetoCindacta = typeof est.cindacta_max_m === "number" ? est.cindacta_max_m : 0;
+      var tetoSlider = Math.max(alturaMaximaConhecida || 0, tetoCindacta);
+      if (tetoSlider > 0) inH.max = tetoSlider;
+
+      function avisarTeto(H) {
+        var partes = [];
+        if (alturaMaximaConhecida && H > alturaMaximaConhecida) partes.push("acima do limite construtivo do lote");
+        if (tetoCindacta && H > tetoCindacta) partes.push("acima do limite do CINDACTA (" + fmtBR(tetoCindacta) + " m)");
+        $("est-h-max").textContent = partes.length ? "⚠ " + partes.join(" · ") : "";
+      }
+
       atualizarNumerosEstaticos(est.desenho_inicial.area_total);
       renderizar(est.desenho_inicial, ultimaAlturaOk);
+      avisarTeto(ultimaAlturaOk);
 
       function pedirAltura(H, aoReceber) {
         fetch("/consulta/estudo", {
@@ -435,23 +470,13 @@
         fetchTimer = setTimeout(function () {
           pedirAltura(H, function (d) {
             if (d.erro) return;
-            /* trava o teto do slider tanto quando os afastamentos já
-               consomem o lote inteiro (envelope vazio) quanto quando o
-               envelope ainda existe mas não sobra projeção nenhuma pra
-               construir (TP + TO já tomaram tudo) — as 2 situações são
-               "não dá mais pra subir a altura", mesmo o 2º caso não
-               setando d.inconstruivel. Sem isso o slider deixava passar
-               de alturas onde a área construível já tinha zerado. */
-            var semProjecao = !d.inconstruivel && (!d.mancha || d.mancha_area <= 1);
-            if (d.inconstruivel || semProjecao) {
-              inH.value = ultimaAlturaOk;
-              inH.max = ultimaAlturaOk;
-              $("est-h-out").textContent = fmtBR(ultimaAlturaOk, 1) + " m";
-              $("est-h-max").textContent = "máx. p/ este lote: " + fmtBR(ultimaAlturaOk, 1) + " m";
-              return;
-            }
+            /* NÃO empurra mais o slider de volta: a altura pedida é sempre
+               desenhada, e quando não sobra área construtiva o próprio
+               "Área construtiva máx. = 0" comunica isso (mais informativo
+               que bloquear o controle sem explicar). O teto do range já
+               limita o quanto dá pra subir. */
             ultimaAlturaOk = H;
-            $("est-h-max").textContent = "";
+            avisarTeto(H);
             renderizar(d, H);
           });
         }, 130);
@@ -742,5 +767,83 @@
       setTimeout(tique, apagando ? 34 : 74);
     }
     setTimeout(tique, 900);
+  }
+
+  /* ---------- 8b. Véu do estudo interativo (BETA) ----------
+     O estudo fica borrado até a pessoa optar por testar — deixa explícito
+     que é experimental ANTES de ela olhar os números e confiar neles. */
+  var veuBtn = document.getElementById("estudo-veu-btn");
+  var envelope = document.getElementById("estudo-envelope");
+  if (veuBtn && envelope) {
+    veuBtn.addEventListener("click", function () {
+      envelope.classList.add("estudo-revelado");
+      ga("estudo_beta_aberto");
+    });
+  }
+
+  /* ---------- 9. Reportar um erro (rodapé, todas as páginas) ----------
+     Envia pro servidor via fetch. Substituiu o mailto:, que dependia de um
+     cliente de e-mail configurado no sistema — no Windows abria o diálogo
+     "escolha um app" e, sem cliente, não fazia nada. */
+  var btnAbrirRelato = document.getElementById("abrir-relato");
+  var modalRelato = document.getElementById("modal-relato");
+  if (btnAbrirRelato && modalRelato) {
+    var relatoMsg = document.getElementById("relato-mensagem");
+    var relatoContato = document.getElementById("relato-contato");
+    var relatoStatus = document.getElementById("relato-status");
+    var relatoEnviar = document.getElementById("relato-enviar");
+
+    function mostrarStatus(texto, erro) {
+      relatoStatus.textContent = texto;
+      relatoStatus.hidden = false;
+      relatoStatus.classList.toggle("relato-status-erro", !!erro);
+    }
+    function fecharRelato() {
+      modalRelato.hidden = true;
+      relatoStatus.hidden = true;
+      relatoEnviar.disabled = false;
+      relatoEnviar.textContent = "Enviar";
+    }
+
+    btnAbrirRelato.addEventListener("click", function () {
+      modalRelato.hidden = false;
+      relatoMsg.focus();
+    });
+    modalRelato.querySelectorAll("[data-fechar-relato]").forEach(function (el) {
+      el.addEventListener("click", fecharRelato);
+    });
+    modalRelato.addEventListener("click", function (e) {
+      if (e.target === modalRelato) fecharRelato();
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !modalRelato.hidden) fecharRelato();
+    });
+
+    relatoEnviar.addEventListener("click", function () {
+      var mensagem = relatoMsg.value.trim();
+      if (!mensagem) { mostrarStatus("Escreva o que aconteceu antes de enviar.", true); return; }
+      relatoEnviar.disabled = true;
+      relatoEnviar.textContent = "Enviando…";
+      fetch("/reportar", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mensagem: mensagem,
+          contato: relatoContato.value,
+          pagina: window.location.pathname + window.location.search,
+        }),
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (!d.ok) throw new Error(d.erro || "falhou");
+        ga("relato_enviado");
+        mostrarStatus("Recebido, obrigado! Isso ajuda a melhorar o Gabarito.", false);
+        relatoMsg.value = "";
+        relatoContato.value = "";
+        relatoEnviar.textContent = "Enviado";
+        setTimeout(fecharRelato, 2200);
+      }).catch(function () {
+        mostrarStatus("Não conseguimos enviar agora. Tente de novo em instantes ou escreva para arthurcunhaf@gmail.com.", true);
+        relatoEnviar.disabled = false;
+        relatoEnviar.textContent = "Enviar";
+      });
+    });
   }
 })();

@@ -8,9 +8,10 @@ Uso:
     abrir http://localhost:5000
 """
 import json
+import os
 import re
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent.parent
@@ -581,6 +582,11 @@ def consulta_page():
     )
     contexto["cindacta"] = _montar_cindacta(g["lat"], g["lon"])
     contexto["veredito"] = _montar_veredito(res, contexto["cindacta"])
+    # a altura do CINDACTA também entra no estudo interativo: é um dos dois
+    # limites do slider de altura (ver script.js — o outro é a altura em que
+    # a área construtiva zera).
+    if estudo is not None and contexto["cindacta"].get("disponivel"):
+        estudo["cindacta_max_m"] = contexto["cindacta"]["atual_m"]
     contexto["frentes"] = _montar_frentes(res)
     contexto["potencial"] = _montar_potencial(res)
     for exc in ficha.get("excecoes_incidentes", []):
@@ -699,26 +705,86 @@ def consulta_estudo():
     return jsonify(desenho)
 
 
+def _entregar_relato(registro: dict) -> None:
+    """Entrega um relato do usuário por TODOS os canais disponíveis.
+
+    ARMADILHA que isto resolve: a versão anterior gravava só num .jsonl
+    local, e o disco do Render free é APAGADO a cada deploy — todo relato
+    de usuário real evaporava em silêncio. Agora:
+      1. stdout  — sempre; no Render isso cai no painel de Logs, que
+         sobrevive ao deploy e é consultável (rede de segurança mínima
+         que funciona sem nenhuma configuração);
+      2. e-mail  — se as variáveis SMTP_* estiverem configuradas (é o
+         canal que o Arthur realmente lê; ver README/CLAUDE.md);
+      3. arquivo — mantido pra rodar local, onde o disco persiste.
+    Nenhuma falha aqui pode derrubar a resposta ao usuário: quem reporta
+    um erro não pode receber outro erro na cara.
+    """
+    linha = json.dumps(registro, ensure_ascii=False)
+    print(f"[RELATO] {linha}", flush=True)  # canal 1: logs do Render
+
+    remetente = os.environ.get("SMTP_USER")
+    senha = os.environ.get("SMTP_PASS")
+    destino = os.environ.get("RELATO_EMAIL", "arthurcunhaf@gmail.com")
+    if remetente and senha:  # canal 2: e-mail (só se configurado)
+        try:
+            import smtplib
+            from email.message import EmailMessage
+            msg = EmailMessage()
+            msg["Subject"] = f"[Gabarito] {registro.get('origem', 'relato')} — {registro.get('tipo') or ''}"
+            msg["From"] = remetente
+            msg["To"] = destino
+            corpo = "\n".join(f"{k}: {v}" for k, v in registro.items() if v)
+            msg.set_content(corpo)
+            with smtplib.SMTP_SSL(os.environ.get("SMTP_HOST", "smtp.gmail.com"),
+                                  int(os.environ.get("SMTP_PORT", "465")), timeout=10) as s:
+                s.login(remetente, senha)
+                s.send_message(msg)
+        except Exception as e:  # nunca propaga — o relato já está no log
+            print(f"[RELATO][aviso] e-mail não enviado: {e}", flush=True)
+
+    try:  # canal 3: arquivo (persiste só em execução local)
+        caminho = BASE / "data" / "relatos_desenho.jsonl"
+        caminho.parent.mkdir(parents=True, exist_ok=True)
+        with open(caminho, "a", encoding="utf-8") as f:
+            f.write(linha + "\n")
+    except Exception:
+        pass
+
+
 @app.route("/reportar-desenho", methods=["POST"])
 def reportar_desenho():
-    """Grava um relato de 'o desenho não bate' — sem banco, só um arquivo
-    JSONL local pro Arthur revisar e ajustar o motor depois. Não bloqueia
-    nem exige nada do usuário."""
+    """Relato de 'o desenho não bate', vindo do estudo interativo."""
     dados = request.get_json(silent=True) or {}
-    registro = {
-        "timestamp": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+    _entregar_relato({
+        "origem": "desenho do lote",
+        "timestamp": datetime.utcnow().isoformat() + "Z",
         "lat": dados.get("lat"), "lon": dados.get("lon"),
         "endereco": dados.get("endereco"),
         "tipo": dados.get("tipo"),
-        "comentario": (dados.get("comentario") or "").strip()[:500],
-    }
-    caminho = BASE / "data" / "relatos_desenho.jsonl"
-    caminho.parent.mkdir(parents=True, exist_ok=True)
-    with open(caminho, "a", encoding="utf-8") as f:
-        f.write(json.dumps(registro, ensure_ascii=False) + "\n")
+        "comentario": (dados.get("comentario") or "").strip()[:2000],
+    })
+    return jsonify({"ok": True})
+
+
+@app.route("/reportar", methods=["POST"])
+def reportar_geral():
+    """Feedback geral (botão do rodapé, em qualquer página). Substitui o
+    mailto: — que no Windows abria um diálogo de 'escolha um app de e-mail'
+    e, sem cliente configurado, simplesmente não funcionava."""
+    dados = request.get_json(silent=True) or {}
+    mensagem = (dados.get("mensagem") or "").strip()
+    if not mensagem:
+        return jsonify({"ok": False, "erro": "Escreva o que aconteceu antes de enviar."}), 400
+    _entregar_relato({
+        "origem": "feedback do rodapé",
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "pagina": (dados.get("pagina") or "")[:300],
+        "contato": (dados.get("contato") or "").strip()[:200],
+        "mensagem": mensagem[:2000],
+    })
     return jsonify({"ok": True})
 
 
 if __name__ == "__main__":
-    import os
     app.run(debug=True, port=int(os.environ.get("PORT", 5000)))

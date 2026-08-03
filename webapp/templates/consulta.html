@@ -551,6 +551,20 @@
       <div class="cel cel-full cel-aviso anexo-aviso">⚠ {{ estudo.anexo_indisponivel }}</div>
       {% endif %}
 
+      <div class="estudo-envelope" id="estudo-envelope">
+
+      <!-- véu do BETA: cobre o estudo borrado até a pessoa optar por testar,
+           deixando claro que é experimental antes de ela confiar no número -->
+      <div class="estudo-veu" id="estudo-veu">
+        <div class="estudo-veu-caixa">
+          <span class="selo-beta mono">BETA</span>
+          <p class="estudo-veu-titulo">Quer testar nossa função interativa?</p>
+          <p class="estudo-veu-texto">Simule quanto dá pra construir no terreno, já descontando os afastamentos, variando a altura pretendida.</p>
+          <button type="button" class="botao botao-mini" id="estudo-veu-btn">Testar o estudo interativo</button>
+          <p class="estudo-veu-aviso">Em desenvolvimento — pode conter imprecisões.</p>
+        </div>
+      </div>
+
       <div class="estudo-corpo">
 
         <div class="estudo-desenho">
@@ -638,11 +652,19 @@
               <span class="mono" id="est-h-max"></span>
             </div>
           </div>
-          <div class="afastamento-lateral-destaque">
-            Afastamento Lateral <b id="est-lat-destaque">—</b> <i class="mono">m</i>
+          <div class="destaques-altura">
+            <div class="destaque-h">
+              <span class="k">Afastamento lateral</span>
+              <b id="est-lat-destaque">—</b> <i class="mono">m</i>
+            </div>
+            <div class="destaque-h destaque-h-area">
+              <span class="k">Área construtiva máx.</span>
+              <b id="est-area-max">—</b> <i class="mono">m²</i>
+            </div>
           </div>
 
         </div>
+      </div>
       </div>
     </section>
     <script type="application/json" id="dados-estudo">{{ estudo|tojson }}</script>

@@ -125,6 +125,34 @@ def _offset_por_aresta(poly, distancias):
     # demais pra esse algoritmo (mesmo efeito de "inconstruível").
     if not poly.buffer(0.05).contains(candidato):
         return None
+    # 2ª sanidade (a de cima NÃO basta): a forma auto-cruzada pode caber
+    # dentro do lote e mesmo assim ter área MAIOR que a de um recuo menor —
+    # o resultado deixa de ser monotônico e o estudo mostrava a área
+    # construtiva CRESCENDO conforme a altura subia (bug real, achado
+    # varrendo alturas num lote: 698 → 494 → 57 → 280 → 464 m²).
+    # NÃO adianta comparar com a erosão uniforme pelo menor recuo: o menor
+    # recuo costuma ser o afastamento FRONTAL (3 m), que deixa a folga
+    # larga demais pra flagrar o problema.
+    # O que vale é a definição do próprio recuo: todo ponto do resultado
+    # tem que estar a pelo menos d_i da reta de CADA aresta i, do lado de
+    # dentro. Como cada uma dessas condições é um semiplano (convexo),
+    # basta testar os VÉRTICES do candidato. Quando o offset degenera, ele
+    # viola isso por metros — e aí tratamos como recuo grande demais
+    # (mesmo efeito de "inconstruível"), em vez de exibir número inventado.
+    TOL = 0.05
+    verts = list(candidato.exterior.coords)
+    for i in range(n):
+        if linhas[i] is None:
+            continue
+        p0 = coords[i]
+        _dx, _dy, comp = _direcao(p0, coords[(i + 1) % n])
+        if comp == 0:
+            continue
+        nx, ny = -_dy / comp, _dx / comp  # normal interior (CCW)
+        di = distancias[i]
+        for (qx, qy) in verts:
+            if (qx - p0[0]) * nx + (qy - p0[1]) * ny < di - TOL:
+                return None
     return candidato
 
 

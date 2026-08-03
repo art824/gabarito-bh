@@ -710,6 +710,42 @@ extensa (documentada aqui pra não repetir buscas):
   Cobre a espera de ~5s (geocodificação + motor + agora também a consulta
   ao vivo do CINDACTA, que soma latência de rede).
 
+## FEITO (08/2026) — relatos que não se perdem, véu BETA, área construtiva
+- **BUG REAL corrigido no motor (área construtiva não-monotônica)**: varrendo
+  alturas num lote real a área construtiva caía e depois VOLTAVA A SUBIR
+  (698 → 494 → 57 → 280 → 464 m²) — geometricamente impossível. Causa: o
+  `_offset_por_aresta` degenera em recuos grandes e produz forma auto-cruzada
+  que passa em `is_valid` E cabe dentro do lote (por isso o guard antigo
+  `poly.contains(candidato)` não pegava). Comparar com a erosão uniforme
+  pelo MENOR recuo também não resolve — o menor costuma ser o afastamento
+  FRONTAL (3 m), folga larga demais. FIX: validar a definição do recuo em
+  si — todo vértice do candidato tem que estar a ≥ d_i da reta de CADA
+  aresta i (cada condição é um semiplano convexo, então testar vértices
+  basta). Efeito colateral bom: `altura_maxima` do lote de teste caiu de
+  82,9 m (falsa) pra 43 m (onde a área realmente zera). Casos normais
+  inalterados (área em H=9 continua 697,6) e regressão passa.
+- **Relatos não se perdem mais** (`_entregar_relato` em app.py): o disco do
+  Render free é apagado a cada deploy e todo relato de usuário evaporava.
+  Agora vai por 3 canais — stdout (aparece nos Logs do Render, sobrevive ao
+  deploy, funciona sem configurar nada), e-mail (só se `SMTP_USER`/`SMTP_PASS`
+  estiverem nas env vars; destino em `RELATO_EMAIL`) e arquivo (persiste só
+  local). Nenhuma falha de canal derruba a resposta: quem reporta um erro
+  não pode receber outro erro na cara.
+- **Fim do `mailto:`**: o botão do rodapé abria o diálogo do Windows de
+  "escolha um app de e-mail" e, sem cliente configurado, não fazia nada.
+  Virou modal com textarea + contato opcional, POST em `/reportar`.
+- **Véu BETA no estudo interativo**: `.estudo-envelope` + `.estudo-veu` —
+  o estudo fica borrado até a pessoa clicar em "Testar", pra deixar claro
+  que é experimental ANTES de ela confiar nos números.
+- **Área construtiva máxima** exibida junto do afastamento lateral
+  (`.destaques-altura`), variando com a altura — número que faltava e que
+  explica sozinho o teto do slider (quando zera, acabou).
+- **Teto do slider** = MAIOR entre altura construtiva e altura do CINDACTA
+  (decisão do Arthur: travar no primeiro zero prendia o slider num valor
+  baixo e às vezes falso). O slider não empurra mais o valor de volta —
+  mostra área 0 + aviso do que foi ultrapassado. BUG corrigido junto:
+  `renderizar()` reescrevia `inH.max` a cada resposta, desfazendo a trava.
+
 ## Roteiro
 - Fase 1.5 (ATUAL): geocodificação endereço→lat/lon + bateria de testes com os
   endereços de resposta conhecida do Arthur. GATE: só ir p/ fase 2 se bater.

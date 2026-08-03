@@ -43,11 +43,30 @@
     </p>
     <div class="footer-feedback">
       <p>Alguma informação estava incorreta ou não ideal? Nos informe para que possamos melhorar.</p>
-      <a class="botao botao-mini" href="mailto:arthurcunhaf@gmail.com?subject=Gabarito%20—%20Feedback">Reportar um erro</a>
+      <button type="button" class="botao botao-mini" id="abrir-relato">Reportar um erro</button>
     </div>
-    <p class="legal">Gabarito · Lei 11.181/19 · Belo Horizonte, MG · <a href="mailto:arthurcunhaf@gmail.com">arthurcunhaf@gmail.com</a></p>
+    <p class="legal">Gabarito · Lei 11.181/19 · Belo Horizonte, MG · contato: arthurcunhaf@gmail.com</p>
   </div>
 </footer>
+
+<!-- Formulário de relato: enviado pro servidor (não usa mailto:, que no
+     Windows abre o diálogo de "escolher app de e-mail" e falha sem cliente
+     configurado). Fica no base.html pra existir em toda página. -->
+<div class="modal-fundo" id="modal-relato" hidden>
+  <div class="modal-caixa modal-relato-caixa" role="dialog" aria-label="Reportar um erro">
+    <button type="button" class="modal-fechar" data-fechar-relato aria-label="Fechar">×</button>
+    <p class="rotulo-secao">Reportar</p>
+    <h3>O que estava errado?</h3>
+    <p class="relato-ajuda">Descreva o que você viu de incorreto ou confuso. Se for sobre um lote específico, cole o endereço ou o índice cadastral — ajuda muito a reproduzir.</p>
+    <textarea id="relato-mensagem" rows="5" placeholder="Ex.: o afastamento frontal da Rua X, 100 está como 3 m, mas na informação básica é 4 m."></textarea>
+    <input type="text" id="relato-contato" placeholder="Seu e-mail (opcional, se quiser resposta)">
+    <p class="relato-status" id="relato-status" hidden></p>
+    <div class="modal-acoes">
+      <button type="button" class="botao botao-mini" id="relato-enviar">Enviar</button>
+      <button type="button" class="botao-texto" data-fechar-relato>Cancelar</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
