@@ -12,7 +12,8 @@ rotação as coordenadas já estão prontas pro SVG (só escalar e inverter Y).
 import math
 
 from shapely.affinity import rotate, translate
-from shapely.geometry import Polygon, LineString
+from shapely.geometry import LineString
+from shapely.ops import unary_union
 
 
 def _direcao(p0, p1):
@@ -65,95 +66,70 @@ def orientar_para_desenho(poly, testadas):
 def _offset_por_aresta(poly, distancias):
     """Recuo com distância própria por aresta. `distancias` é uma lista do
     mesmo tamanho que os vértices do exterior (sem o ponto de fechamento),
-    na MESMA ordem/índice usado em calcular_testadas. Interior deve estar
-    à esquerda de cada aresta (polígono CCW). Retorna None se o resultado
-    não for um polígono simples válido (recuo grande demais / lote em L)."""
+    na MESMA ordem/índice usado em calcular_testadas. Retorna None quando o
+    recuo não deixa área aproveitável.
+
+    COMO FUNCIONA (e por que mudou em 08/2026): a versão anterior deslocava
+    a RETA de cada aresta e cruzava as retas consecutivas pra achar os novos
+    vértices. Isso é exato só em polígonos convexos de poucos lados; com
+    arestas quase colineares (comuníssimo no CTM — lote de 12 vértices com
+    a frente levemente curva) o cruzamento de duas retas quase paralelas
+    dispara pra longe e devolve um polígono AUTO-CRUZADO. O `buffer(0)`
+    "consertava" a forma e o resultado seguia pro desenho, às vezes
+    violando o próprio afastamento que deveria respeitar. Medido numa
+    amostra de 400 lotes reais: só 34,6% produziam envelope válido, e as
+    falhas eram lotes CONVEXOS normais, não casos exóticos.
+
+    Agora usamos a definição do recuo diretamente: a área construtiva é o
+    que sobra do lote depois de remover a faixa de largura d_i ao longo de
+    CADA aresta i. Em shapely isso é uma diferença contra a união dos
+    buffers das arestas — robusto (não auto-cruza), correto por definição,
+    monotônico por construção (recuo maior => área menor ou igual) e válido
+    também em lotes côncavos. Cantos convexos continuam saindo retos; num
+    vértice reflexo o canto sai arredondado, que é o correto (a construção
+    também precisa se afastar do vértice).
+    """
     coords = list(poly.exterior.coords)[:-1]
     n = len(coords)
     if n != len(distancias):
         return None
 
-    linhas = []
+    faixas = []
     for i in range(n):
-        p0, p1 = coords[i], coords[(i + 1) % n]
-        dx, dy, comp = _direcao(p0, p1)
-        if comp == 0:
-            linhas.append(None)
-            continue
-        ux, uy = dx / comp, dy / comp
-        nx, ny = -uy, ux  # normal à esquerda = interior, p/ CCW
         d = distancias[i]
-        ox, oy = p0[0] + nx * d, p0[1] + ny * d
-        linhas.append((ox, oy, ux, uy))
+        if d is None or d <= 0:
+            continue
+        p0, p1 = coords[i], coords[(i + 1) % n]
+        if _direcao(p0, p1)[2] == 0:
+            continue
+        faixas.append(LineString([p0, p1]).buffer(d))
 
-    def interseccao(a, b):
-        ax, ay, adx, ady = a
-        bx, by, bdx, bdy = b
-        denom = adx * bdy - ady * bdx
-        if abs(denom) < 1e-9:
-            return None
-        t = ((bx - ax) * bdy - (by - ay) * bdx) / denom
-        return (ax + adx * t, ay + ady * t)
-
-    novos = []
-    for i in range(n):
-        a = linhas[i - 1]
-        b = linhas[i]
-        if a is None or b is None:
-            return None
-        pt = interseccao(a, b)
-        if pt is None:
-            return None
-        novos.append(pt)
+    if not faixas:
+        return poly
 
     try:
-        candidato = Polygon(novos)
+        resto = poly.difference(unary_union(faixas))
     except Exception:
         return None
-    if not candidato.is_valid:
-        candidato = candidato.buffer(0)
-    if candidato.is_empty or candidato.geom_type != "Polygon" or not candidato.is_valid:
+
+    if resto.is_empty:
         return None
-    if candidato.area < 0.5:
+    if resto.geom_type in ("MultiPolygon", "GeometryCollection"):
+        # o recuo partiu o lote em pedaços (lote em L, gargalo estreito):
+        # fica com o maior, que é o que de fato dá pra ocupar
+        partes = [g for g in resto.geoms if g.geom_type == "Polygon" and not g.is_empty]
+        if not partes:
+            return None
+        resto = max(partes, key=lambda g: g.area)
+    if resto.geom_type != "Polygon" or resto.area < 0.5:
         return None
-    # sanidade: um recuo pra dentro NUNCA pode ultrapassar o polígono
-    # original. O algoritmo de interseção de retas consecutivas (sem
-    # clipping de vértice reflexo) pode produzir uma forma auto-cruzada
-    # que passa no is_valid mas "escapa" pra fora em lotes bem côncavos —
-    # descoberto testando com recuo grande num lote real (área aumentava
-    # em vez de diminuir). Se isso acontecer, tratamos como recuo grande
-    # demais pra esse algoritmo (mesmo efeito de "inconstruível").
-    if not poly.buffer(0.05).contains(candidato):
-        return None
-    # 2ª sanidade (a de cima NÃO basta): a forma auto-cruzada pode caber
-    # dentro do lote e mesmo assim ter área MAIOR que a de um recuo menor —
-    # o resultado deixa de ser monotônico e o estudo mostrava a área
-    # construtiva CRESCENDO conforme a altura subia (bug real, achado
-    # varrendo alturas num lote: 698 → 494 → 57 → 280 → 464 m²).
-    # NÃO adianta comparar com a erosão uniforme pelo menor recuo: o menor
-    # recuo costuma ser o afastamento FRONTAL (3 m), que deixa a folga
-    # larga demais pra flagrar o problema.
-    # O que vale é a definição do próprio recuo: todo ponto do resultado
-    # tem que estar a pelo menos d_i da reta de CADA aresta i, do lado de
-    # dentro. Como cada uma dessas condições é um semiplano (convexo),
-    # basta testar os VÉRTICES do candidato. Quando o offset degenera, ele
-    # viola isso por metros — e aí tratamos como recuo grande demais
-    # (mesmo efeito de "inconstruível"), em vez de exibir número inventado.
-    TOL = 0.05
-    verts = list(candidato.exterior.coords)
-    for i in range(n):
-        if linhas[i] is None:
-            continue
-        p0 = coords[i]
-        _dx, _dy, comp = _direcao(p0, coords[(i + 1) % n])
-        if comp == 0:
-            continue
-        nx, ny = -_dy / comp, _dx / comp  # normal interior (CCW)
-        di = distancias[i]
-        for (qx, qy) in verts:
-            if (qx - p0[0]) * nx + (qy - p0[1]) * ny < di - TOL:
-                return None
-    return candidato
+
+    # tira micro-vértices dos arcos, deixando o SVG mais leve sem mudar a
+    # área de forma perceptível (2 cm de tolerância)
+    simples = resto.simplify(0.02, preserve_topology=True)
+    if simples.geom_type == "Polygon" and not simples.is_empty and simples.area >= 0.5:
+        resto = simples
+    return resto
 
 
 def calcular_envelope(poly_desenho, testadas, af_por_rua, af_exc, lateral_m):

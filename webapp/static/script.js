@@ -320,6 +320,13 @@
       return cont ? [somaX / cont, somaY / cont] : contorno[0];
     }
     function renderizar(d, H) {
+      /* o número da altura é atualizado AQUI (e não só no handler do
+         slider) porque os dois modos — polígono real e retângulo manual —
+         passam por renderizar. Antes só o modo real atualizava, e no modo
+         manual o valor exibido ficava congelado enquanto o desenho mudava. */
+      var elH = $("est-h-out");
+      if (elH && typeof H === "number" && !isNaN(H)) elH.textContent = fmtBR(H, 1) + " m";
+
       var gLote = limparGrupo("g-lote"), gMancha = limparGrupo("g-mancha"),
           gCotas = limparGrupo("g-cotas"), gAviso = limparGrupo("g-aviso");
       var n = d.contorno.length - 1;

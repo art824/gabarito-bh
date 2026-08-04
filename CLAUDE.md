@@ -746,6 +746,43 @@ extensa (documentada aqui pra não repetir buscas):
   mostra área 0 + aviso do que foi ultrapassado. BUG corrigido junto:
   `renderizar()` reescrevia `inH.max` a cada resposta, desfazendo a trava.
 
+## FEITO (08/2026) — REESCRITA do núcleo geométrico do anexo interativo
+Auditoria pedida pelo Arthur ("o anexo não funciona direito boa parte das
+vezes"). O diagnóstico foi pior do que a impressão dele:
+- **Criado `tests/cobertura_anexo.py`** — mede em quantos % dos lotes REAIS
+  o anexo consegue produzir envelope, no cenário mais folgado possível
+  (AF 3 m + lateral mínima 1,5 m). Sem esse número, "melhorei o desenho" é
+  opinião. Rodar: `python tests/cobertura_anexo.py 400`.
+- **Medida inicial: 34,6%** (amostra de 400 lotes). Ou seja: o anexo falhava
+  em 2 de cada 3 lotes — e as falhas NÃO eram lotes exóticos, eram lotes
+  CONVEXOS normais (95-100% de preenchimento do hull) com 6-18 vértices.
+- **Causa raiz**: `_offset_por_aresta` deslocava a RETA de cada aresta e
+  cruzava retas consecutivas. Isso só é estável em polígonos convexos de
+  poucos lados; com arestas quase colineares (lote do CTM com a frente
+  levemente curva, situação comuníssima) o cruzamento de duas retas quase
+  paralelas dispara pra longe e produz polígono AUTO-CRUZADO. O `buffer(0)`
+  "consertava" a forma e o desenho seguia — às vezes violando o próprio
+  afastamento que deveria respeitar (medido: violação de 0,88 m num lote).
+- **FIX — algoritmo trocado** pela definição do recuo: área construtiva =
+  lote MENOS a união dos buffers de cada aresta pela sua distância d_i
+  (`poly.difference(unary_union(faixas))`). Robusto, correto por definição,
+  monotônico por construção, funciona em côncavo. Canto convexo sai reto;
+  vértice reflexo sai arredondado (correto — a construção também precisa se
+  afastar do vértice). **Cobertura: 34,6% → 99,5%.**
+- **Validado**: afastamentos respeitados em 144 lotes (pior violação 2 cm =
+  a tolerância do `simplify`, desprezível); área monotônica decrescente com
+  a altura; regressão dos 4 lotes passa; lote de esquina segue com as 2 ruas.
+- Caso que o Arthur reportou (Rua Silveira 437, Graça): era convexo, 12
+  vértices, testada em 3 arestas — falhava com "inconstruível" já no
+  afastamento mínimo. Volta a funcionar (162 m² em H=9).
+- **BUG separado, corrigido junto**: o número da "altura pretendida" só era
+  atualizado no modo polígono-real; no modo manual (retângulo) o valor
+  exibido congelava enquanto o desenho mudava. Agora é atualizado dentro de
+  `renderizar()`, por onde os DOIS modos passam.
+- ARMADILHA pra quem mexer aqui: não voltar a "consertar" geometria inválida
+  com `buffer(0)` sem checar o que ela virou — foi exatamente isso que
+  escondeu o problema por tanto tempo.
+
 ## Roteiro
 - Fase 1.5 (ATUAL): geocodificação endereço→lat/lon + bateria de testes com os
   endereços de resposta conhecida do Arthur. GATE: só ir p/ fase 2 se bater.
