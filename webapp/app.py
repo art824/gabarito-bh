@@ -104,12 +104,15 @@ def _resolver_af_regra_geral(classe_via: str) -> float | None:
 def _montar_frentes(res: dict) -> list | None:
     """Lotes de esquina: cada rua confrontante é uma FRENTE, com seu próprio
     afastamento frontal (a classificação da via pode diferir entre as ruas).
-    Só retorna quando há 2 testadas legítimas (esquina); lote de 1 rua já é
-    coberto por via_mais_proxima, e 3+ ruas viram geometria_complexa. Pedido
-    da K2: as duas ruas têm igual importância, não uma 'principal' e outra
+    Retorna quando há 2 OU MAIS testadas (lote de 1 rua já é coberto por
+    via_mais_proxima). Antes 3+ ruas eram descartadas como "geometria
+    complexa" — limitação do algoritmo antigo de recuo, que caía nesses
+    casos; o recuo por diferença de buffers (08/2026) trata qualquer número
+    de frentes, então elas passaram a ser exibidas normalmente. Pedido da
+    K2: todas as ruas têm igual importância, não uma 'principal' e outra
     'provável' de canto."""
     lote = res.get("lote_real")
-    if not lote or lote.get("geometria_complexa"):
+    if not lote:
         return None
     testadas = lote.get("testadas") or []
     if len(testadas) < 2:
@@ -179,7 +182,7 @@ def _montar_estudo(res: dict) -> dict | None:
     # testada/área reais do CTM, quando o lote foi identificado com confiança
     # e a geometria não é complexa demais (mais de 2 ruas confrontantes)
     testada_real, area_real = None, None
-    if lote_real and not lote_real.get("geometria_complexa") and lote_real.get("testadas"):
+    if lote_real and lote_real.get("testadas"):
         testada_real = max(t["comprimento_m"] for t in lote_real["testadas"])
         area_real = lote_real.get("area_m2")
 
@@ -319,7 +322,7 @@ def _montar_potencial(res: dict) -> dict | None:
 
     lote_real = res.get("lote_real")
     area = None
-    if lote_real and not lote_real.get("geometria_complexa"):
+    if lote_real:
         area = lote_real.get("area_m2")
 
     # alturas do gráfico: a maior barra ocupa ALTURA_MAX; a outra é
@@ -551,13 +554,7 @@ def consulta_page():
         # desenho automático — cai no modo manual com aviso explícito.
         lote_real = res.get("lote_real")
         estudo["anexo_indisponivel"] = None
-        if lote_real and lote_real.get("geometria_complexa"):
-            estudo["anexo_indisponivel"] = (
-                "Este lote confronta 3 ou mais ruas — o desenho automático ainda não "
-                "cobre esse caso com segurança. Abaixo, um estudo genérico com medidas "
-                "editáveis (não é o desenho real do lote)."
-            )
-        elif estudo.get("testada_real") and estudo["desenho_inicial"] is None:
+        if estudo.get("testada_real") and estudo["desenho_inicial"] is None:
             estudo["anexo_indisponivel"] = (
                 "Não foi possível calcular o desenho deste lote com segurança. Abaixo, "
                 "um estudo genérico com medidas editáveis (não é o desenho real do lote)."
@@ -608,7 +605,10 @@ def _calcular_desenho(lat: float, lon: float, altura: float, res: dict | None = 
     poly = achado["poly"]
     testadas_info = calcular_testadas(poly, VIA)
     testadas = testadas_info["testadas"]
-    if testadas_info["geometria_complexa"] or not testadas:
+    # o número de ruas não bloqueia mais o desenho (ver _montar_frentes);
+    # se o recuo não fechar, o próprio calcular_envelope devolve None e o
+    # anexo cai honestamente em "indisponível" mais adiante
+    if not testadas:
         return None
 
     if res is None:

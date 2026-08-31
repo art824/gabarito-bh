@@ -2,6 +2,35 @@
 
 {% block titulo %}Consultar lote — Gabarito{% endblock %}
 
+{#
+  Transparência de origem. A pergunta que o usuário faz é "posso confiar
+  neste número?", e a resposta útil separa TRÊS coisas que antes vinham
+  misturadas num texto só, cheio de jargão interno:
+    oficial  — copiado de um cadastro/mapa da Prefeitura, sem alteração
+    lei      — valor lido na tabela da Lei 11.181/19 pelo enquadramento
+    conta    — medição ou cálculo feito pelo próprio Gabarito
+  O que é "conta nossa" é o que mais precisa de conferência — e era
+  exatamente o que ficava indistinguível do resto.
+#}
+{% macro fontes() %}
+<details class="fsec-fontes">
+  <summary><span class="fsec-fontes-btn">De onde vêm estes dados?</span></summary>
+  <div class="fontes-corpo">{{ caller() }}</div>
+</details>
+{% endmacro %}
+
+{% macro grupo_oficial() %}
+<p class="fontes-grupo"><span class="fonte-tag tag-oficial">Direto da fonte oficial</span> copiado do cadastro da Prefeitura, sem alteração</p>
+{% endmacro %}
+
+{% macro grupo_lei() %}
+<p class="fontes-grupo"><span class="fonte-tag tag-lei">Da letra da lei</span> valor da tabela da Lei 11.181/19 para o enquadramento deste lote</p>
+{% endmacro %}
+
+{% macro grupo_conta() %}
+<p class="fontes-grupo"><span class="fonte-tag tag-conta">Conta do Gabarito</span> medido ou calculado por nós — é o que mais vale conferir</p>
+{% endmacro %}
+
 {% block conteudo %}
 
 <div class="container consulta-topo">
@@ -138,7 +167,7 @@
         {% if identificacao.area_ctm %}
         <div class="cel"><span class="k">Área do terreno · CTM</span><span class="v vnum">{{ '%g'|format(identificacao.area_ctm) }} <i>m²</i></span></div>
         {% endif %}
-        {% if resultado.lote_real and resultado.lote_real.testadas and not resultado.lote_real.geometria_complexa %}
+        {% if resultado.lote_real and resultado.lote_real.testadas %}
         <div class="cel"><span class="k">Testada · CTM</span><span class="v vnum">{{ '%g'|format(resultado.lote_real.testadas[0].comprimento_m) }} <i>m</i></span></div>
         {% endif %}
         {% if identificacao.divergencia_area %}
@@ -180,19 +209,23 @@
       </div>
       {% endif %}
 
-      <details class="fsec-fontes">
-        <summary><span class="fsec-fontes-btn">De onde vêm estes dados?</span></summary>
+      {% call fontes() %}
+        {{ grupo_oficial() }}
         <ul>
-          <li><b>Índice cadastral, endereço, CEP, infraestrutura e edificação</b> — Cadastro Imobiliário do IPTU (BHMAP).</li>
-          <li><b>Setor / Quadra / Lote CTM</b> — derivados do código NULOTCTM do Cadastro Técnico Municipal (padrão 2+5+5 dígitos).</li>
-          <li><b>Área do terreno · IPTU</b> — valor declarado no Cadastro Imobiliário do IPTU.</li>
-          <li><b>Área do terreno · CTM</b> — campo oficial AREA_M2 do Cadastro Técnico Municipal (calculada pela PBH do vetor do lote).</li>
-          {% if resultado.lote_real and resultado.lote_real.testadas and not resultado.lote_real.geometria_complexa %}
-          <li><b>Testada · CTM</b> — calculada pelo Gabarito a partir do polígono do lote (CTM) e da Classificação Viária; pode diferir da testada grafada em planta.</li>
-          {% endif %}
-          <li><b>Bairro oficial</b> — camada Bairro Oficial (BHMAP), por ponto-em-polígono.</li>
+          <li><b>Índice cadastral, endereço, CEP, infraestrutura e dados da edificação</b> — Cadastro Imobiliário do IPTU da Prefeitura de BH (o mesmo cadastro que gera o carnê do IPTU).</li>
+          <li><b>Área do terreno · IPTU</b> — o valor que consta nesse cadastro do IPTU.</li>
+          <li><b>Área do terreno · CTM</b> — o valor que a própria Prefeitura calcula a partir do desenho oficial do lote no Cadastro Técnico Municipal. Pode divergir do valor do IPTU; se a diferença passa de 15%, avisamos na ficha.</li>
+          <li><b>Bairro</b> — mapa oficial de bairros da Prefeitura.</li>
         </ul>
-      </details>
+        {{ grupo_conta() }}
+        <ul>
+          <li><b>Setor / Quadra / Lote</b> — separamos os três campos do código do lote no Cadastro Técnico (12 dígitos: 2 do setor, 5 da quadra, 5 do lote).</li>
+          {% if resultado.lote_real and resultado.lote_real.testadas %}
+          <li><b>Testada</b> — medimos, no desenho oficial do lote, o trecho que faz frente para a rua. <b>Não é</b> a testada grafada na planta de parcelamento aprovada — havendo divergência, vale a da planta.</li>
+          {% endif %}
+        </ul>
+        <p class="fontes-nota">Todos os mapas e cadastros acima são públicos e podem ser conferidos no BHMap (bhmap.pbh.gov.br) e no SIURBE. A cópia que usamos foi baixada em julho/2026 — cadastros mudam, então confira a data se o lote for recente.</p>
+      {% endcall %}
     </section>
     {% endif %}
 
@@ -239,21 +272,25 @@
         {% endif %}
       </div>
 
-      <details class="fsec-fontes">
-        <summary><span class="fsec-fontes-btn">De onde vêm estes dados?</span></summary>
+      {% call fontes() %}
+        {{ grupo_oficial() }}
         <ul>
-          <li><b>Zoneamento</b> — camada Zoneamento do BHMAP (Anexo I), por ponto-em-polígono.</li>
-          <li><b>ADEs incidentes{% if resultado.ade_setor_nome %} e setor{% endif %}</b> — camada{% if resultado.ade_setor_nome %}s{% endif %} ADE{% if resultado.ade_setor_nome %} + Setores de ADE{% endif %} do BHMAP, por ponto-em-polígono.</li>
+          <li><b>Zoneamento</b> — mapa oficial de zoneamento da Lei 11.181/19, publicado pela Prefeitura. Vemos dentro de qual zona o lote cai.</li>
+          <li><b>ADEs (Áreas de Diretrizes Especiais){% if resultado.ade_setor_nome %} e o setor da ADE{% endif %}</b> — mapa{% if resultado.ade_setor_nome %}s{% endif %} oficia{% if resultado.ade_setor_nome %}is{% else %}l{% endif %} da{% if resultado.ade_setor_nome %}s{% endif %} ADE{% if resultado.ade_setor_nome %}s e dos seus setores internos{% endif %}, mesma fonte.</li>
           {% if resultado.lote_real %}
-          <li><b>Centralidade Local · Conexão Verde</b> — camadas homônimas do BHMAP, por ponto-em-polígono.</li>
+          <li><b>Centralidade Local · Conexão Verde</b> — mapas oficiais de mesmo nome da Prefeitura.</li>
           {% endif %}
+          <li><b>Nome e classificação das vias</b> — mapa oficial de Classificação Viária da Prefeitura.</li>
+        </ul>
+        {{ grupo_conta() }}
+        <ul>
           {% if frentes %}
-          <li><b>Frentes do lote (esquina)</b> — cada rua confrontante identificada pelo Gabarito cruzando o polígono do lote (CTM) com a Classificação Viária do BHMAP; o afastamento frontal de cada uma vem do Anexo XII, pela classificação da respectiva via.</li>
+          <li><b>Quais ruas o lote confronta</b> — cruzamos o desenho do lote com o mapa das vias pra descobrir quais ruas ele confronta e qual trecho faz frente pra cada uma. A classificação de cada via (e o afastamento que ela exige) é oficial; a associação lote↔rua é nossa.</li>
           {% elif resultado.via_mais_proxima %}
-          <li><b>Via do lote</b> — camada Classificação Viária do BHMAP; é a via mais próxima do ponto (a {{ resultado.via_mais_proxima.distancia_m }} m), não confirmada como testada.</li>
+          <li><b>Via do lote</b> — é a via mais próxima do ponto pesquisado (a {{ resultado.via_mais_proxima.distancia_m }} m). Marcamos como "provável" porque não confirmamos que o lote realmente faz frente pra ela.</li>
           {% endif %}
         </ul>
-      </details>
+      {% endcall %}
     </section>
 
     {% set ns.sec = ns.sec + 1 %}
@@ -289,16 +326,16 @@
         {% endif %}
       </div>
 
-      <details class="fsec-fontes">
-        <summary><span class="fsec-fontes-btn">De onde vêm estes dados?</span></summary>
+      {% call fontes() %}
+        {{ grupo_oficial() }}
         <ul>
-          <li><b>Proteção federal</b> — camada AREA_PROTECAO_CULTURAL_IPHAN (BHMAP): perímetros de tombamento e áreas envoltórias do IPHAN.</li>
-          <li><b>Proteção estadual</b> — camada AREA_PROTECAO_CULTURAL_IEPHA (BHMAP): perímetros e áreas envoltórias do IEPHA-MG.</li>
-          <li><b>Proteção municipal</b> — camada AREA_PROTECAO_CULTURAL_CDPCM-BH (BHMAP): conjuntos urbanos e paisagísticos protegidos (ou em estudo) pelo Conselho Deliberativo do Patrimônio Cultural do Município.</li>
-          <li><b>APP</b> — camada AREA_PRESERVACAO_PERMANENTE (BHMAP), classificada por origem (curso d'água, nascente, brejo, declividade).</li>
-          <li><b>Como é verificado</b> — cruzamento com o <b>polígono do lote</b> (CTM) quando ele foi identificado, não apenas com o ponto do endereço; assim uma área que pega só parte do terreno também é detectada.</li>
+          <li><b>Proteção federal</b> — perímetros de tombamento e áreas de entorno do <b>IPHAN</b>, publicados pela Prefeitura.</li>
+          <li><b>Proteção estadual</b> — perímetros e áreas de entorno do <b>IEPHA-MG</b>.</li>
+          <li><b>Proteção municipal</b> — conjuntos urbanos e paisagísticos protegidos (ou em estudo) pelo <b>CDPCM-BH</b>, o conselho municipal do patrimônio cultural.</li>
+          <li><b>APP</b> — mapa oficial das Áreas de Preservação Permanente, que já vem classificado pela origem (curso d'água, nascente, brejo ou declividade).</li>
         </ul>
-      </details>
+        <p class="fontes-nota"><b>Como verificamos:</b> comparamos o desenho inteiro do lote com esses mapas — não só o ponto do endereço. Assim, uma área que pega apenas um pedaço do terreno também aparece aqui. O limite exato dentro do lote precisa de levantamento topográfico; esta ficha diz <i>se</i> incide, não <i>até onde</i>.</p>
+      {% endcall %}
     </section>
 
     {% if cindacta %}
@@ -340,12 +377,13 @@
       </div>
 
       {% if cindacta.disponivel %}
-      <details class="fsec-fontes">
-        <summary><span class="fsec-fontes-btn">De onde vêm estes dados?</span></summary>
+      {% call fontes() %}
+        {{ grupo_oficial() }}
         <ul>
-          <li><b>Altura máxima (CINDACTA)</b> — camada BHMAP_ALTIMETRIA (PBH, workspace geosiurbe): histórico da altura liberada por lote, atualizado conforme decisões do CINDACTA 1. Consultada ao vivo, não é uma base baixada.</li>
+          <li><b>Altura máxima</b> — cadastro da Prefeitura que registra, lote a lote, a altura liberada pelo <b>CINDACTA 1</b> (órgão da Aeronáutica responsável pela proteção do espaço aéreo). Consultamos <b>ao vivo</b>, no momento da sua busca — não é uma cópia guardada aqui.</li>
         </ul>
-      </details>
+        <p class="fontes-nota">Esse cadastro guarda o histórico das alterações; por isso mostramos o valor vigente e o anterior. Quem decide essa altura é o CINDACTA, não a Prefeitura — então um documento municipal emitido antes da última atualização pode trazer o valor antigo. Em caso de dúvida, o CINDACTA é a palavra final.</p>
+      {% endcall %}
       {% endif %}
     </section>
     {% endif %}
@@ -406,23 +444,31 @@
         {% endif %}
       </div>
 
-      <details class="fsec-fontes">
-        <summary><span class="fsec-fontes-btn">De onde vêm estes dados?</span></summary>
+      {% call fontes() %}
+        {% if f.taxa_permeabilidade_min %}
+        {{ grupo_oficial() }}
         <ul>
-          <li><b>Coeficientes de aproveitamento e quota</b> — Lei 11.181/19, Anexo XII, tabela 10, pela sigla {{ resultado.zoneamento.sigla }}.</li>
-          <li><b>Afastamento frontal</b> — Anexo XII (afastamento frontal por classificação da via: {{ resultado.via_mais_proxima.classificacao if resultado.via_mais_proxima else '—' }}).</li>
+          <li><b>Permeabilidade mínima (TP)</b> — mapa oficial de Taxa de Permeabilidade da Prefeitura (Anexo II da lei). É um mapa, não uma conta: o valor vem da área onde o lote está.</li>
+        </ul>
+        {% endif %}
+        {{ grupo_lei() }}
+        <ul>
+          <li><b>Coeficientes de aproveitamento e quota de terreno</b> — Lei 11.181/19, Anexo XII, tabela 10, na linha do zoneamento <b>{{ resultado.zoneamento.sigla }}</b>.</li>
+          <li><b>Afastamento frontal</b> — Anexo XII, pelo tipo da via{% if resultado.via_mais_proxima %} (aqui: {{ resultado.via_mais_proxima.classificacao|lower }}){% endif %}.</li>
           {% if amd_valor is not none %}
-          <li><b>Altura máxima na divisa</b> — Anexo XII (altura máxima na divisa), pela via e faixa de largura do lote.</li>
-          {% endif %}
-          {% if estudo %}
-          <li><b>Afastamentos laterais e de fundos</b> — Anexo XII, tabela 4 (fórmula com fator B); calculados por altura no estudo interativo.</li>
+          <li><b>Altura máxima na divisa</b> — Anexo XII, pelo tipo e pela largura da via deste lote.</li>
           {% endif %}
           {% if f.taxa_permeabilidade_min %}
-          <li><b>Permeabilidade mínima (TP)</b> — camada Taxa de Permeabilidade do BHMAP (Anexo II), por ponto-em-polígono.</li>
-          <li><b>Ocupação máxima (TO)</b> — Anexo XII, tabela 11, derivada da TP deste lote.</li>
+          <li><b>Ocupação máxima (TO)</b> — Anexo XII, tabela 11: a lei define a TO a partir da taxa de permeabilidade do lote.</li>
           {% endif %}
         </ul>
-      </details>
+        {% if estudo %}
+        {{ grupo_conta() }}
+        <ul>
+          <li><b>Afastamentos laterais e de fundos</b> — a lei dá uma fórmula (Anexo XII, tabela 4) que depende da altura pretendida; aplicamos essa fórmula no estudo interativo conforme você move o controle de altura.</li>
+        </ul>
+        {% endif %}
+      {% endcall %}
     </section>
 
     {% if potencial %}
@@ -515,16 +561,23 @@
       <p class="pot-aviso">Potencial teórico pelo coeficiente da zona{% if potencial.area %} e pela área do lote{% endif %}. O que cabe de fato depende de afastamentos, permeabilidade e altura — veja no estudo interativo abaixo.</p>
       </div>
 
-      <details class="fsec-fontes">
-        <summary><span class="fsec-fontes-btn">De onde vêm estes dados?</span></summary>
+      {% call fontes() %}
+        {% if potencial.area %}
+        {{ grupo_oficial() }}
         <ul>
-          <li><b>Coeficientes e quota</b> — Lei 11.181/19, Anexo XII, tabela 10, pela sigla {{ resultado.zoneamento.sigla }}.</li>
-          {% if potencial.area %}
-          <li><b>Área do lote</b> — área oficial no CTM ({{ '%g'|format(potencial.area) }} m²).</li>
-          {% endif %}
-          <li><b>Cálculo</b> — potencial = área × coeficiente; unidades = potencial básico ÷ quota (contas do próprio Gabarito).</li>
+          <li><b>Área do lote</b> — {{ '%g'|format(potencial.area) }} m², valor calculado pela Prefeitura a partir do desenho oficial do lote (Cadastro Técnico).</li>
         </ul>
-      </details>
+        {% endif %}
+        {{ grupo_lei() }}
+        <ul>
+          <li><b>Coeficientes e quota de terreno</b> — Lei 11.181/19, Anexo XII, tabela 10, na linha do zoneamento <b>{{ resultado.zoneamento.sigla }}</b>.</li>
+        </ul>
+        {{ grupo_conta() }}
+        <ul>
+          <li><b>Potencial em m²</b> — multiplicamos a área do lote pelo coeficiente.</li>
+          <li><b>Número de unidades</b> — dividimos o potencial básico pela quota de terreno por unidade. É um teto pela quota; o número real também depende de afastamentos, permeabilidade e do projeto.</li>
+        </ul>
+      {% endcall %}
     </section>
     {% endif %}
 
@@ -625,7 +678,7 @@
           <div class="painel-grupo">
             <span class="grupo-k">Do lote — não mudam com a altura</span>
             <div class="grupo-cel">
-              {% if resultado.lote_real and resultado.lote_real.testadas and not resultado.lote_real.geometria_complexa %}
+              {% if resultado.lote_real and resultado.lote_real.testadas %}
               <div class="gcel"><span class="k">Testada</span><b>{{ '%g'|format(resultado.lote_real.testadas[0].comprimento_m) }}</b><i class="mono">m</i></div>
               {% endif %}
               {% if f.afastamento_frontal_m is number %}
@@ -702,13 +755,14 @@
     <div class="bloco-fontes">
       <h4>Fontes dos dados</h4>
       <ul>
-        <li><b>BHMAP (Prefeitura de BH)</b> — camadas oficiais de Zoneamento, ADE e Setores de ADE, Classificação Viária, Taxa de Permeabilidade, Conexão Verde, Conexão de Fundo de Vale, Centralidade Local, Recuo de Alinhamento, Projeto Viário Prioritário e Bairros. Base baixada em 07/2026.</li>
-        <li><b>Cadastro Técnico Municipal (CTM)</b> — polígono, área e testada do lote (via BHMAP).</li>
-        <li><b>Cadastro Imobiliário do IPTU</b> — índice cadastral, endereço oficial, infraestrutura e edificação (via BHMAP).</li>
-        <li><b>Lei 11.181/19, Anexo XII</b> — tabelas 3, 4, 5, 10, 11 e 12 (coeficientes, quota, afastamentos, TP/TO), estruturadas a partir do texto oficial.</li>
-        <li><b>Geocodificação</b> — Mapbox (conversão do endereço digitado em coordenada; o lote é sempre confirmado contra o CTM).</li>
+        <li><b>Prefeitura de Belo Horizonte</b> — mapas oficiais de zoneamento, ADEs e seus setores, classificação viária, taxa de permeabilidade, conexão verde, conexão de fundo de vale, centralidade local, recuo de alinhamento, projeto viário prioritário, bairros, proteção cultural e APP. Públicos no BHMap (bhmap.pbh.gov.br); a cópia usada aqui é de <b>julho/2026</b>.</li>
+        <li><b>Cadastro Técnico Municipal</b> — o desenho oficial de cada lote e sua área.</li>
+        <li><b>Cadastro Imobiliário do IPTU</b> — índice cadastral, endereço, infraestrutura do logradouro e dados da edificação.</li>
+        <li><b>CINDACTA 1 (Aeronáutica)</b> — altura máxima liberada, lida ao vivo no cadastro que a Prefeitura mantém atualizado com as decisões do órgão.</li>
+        <li><b>Lei 11.181/19 (Plano Diretor), Anexo XII</b> — coeficientes, quota de terreno, afastamentos e taxas, transcritos do texto oficial.</li>
+        <li><b>Mapbox</b> — só converte o endereço digitado em coordenada. O lote em si é sempre confirmado no cadastro da Prefeitura, nunca no Mapbox.</li>
       </ul>
-      <p class="sub">A base legal pode mudar (Plano Diretor em revisão) e as camadas são atualizadas periodicamente pela Prefeitura — divergências pontuais podem existir entre a data da base e o cadastro vigente.</p>
+      <p class="sub">Duas ressalvas honestas: o Plano Diretor está em revisão, então a base legal pode mudar; e a Prefeitura atualiza seus cadastros periodicamente, então pode haver divergência entre a cópia de julho/2026 usada aqui e o cadastro de hoje. Para decisões definitivas, confirme na fonte.</p>
     </div>
 
     <div class="ficha-rodape-export">

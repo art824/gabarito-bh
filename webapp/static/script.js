@@ -434,34 +434,50 @@
          cada arrastada, só reaproveitar o valor. */
       var alturaMaximaConhecida = est.desenho_inicial.altura_maxima;
 
-      /* TETO DO SLIDER = o MAIOR entre:
+      /* TETO DO SLIDER = o MENOR entre:
            (a) a altura em que a área construtiva zera (varredura do servidor);
            (b) a altura máxima liberada pelo CINDACTA.
-         Usar o MAIOR (e não o menor) é decisão do Arthur, e tem motivo: o
-         algoritmo de recuo por aresta às vezes declara "inconstruível" cedo
-         demais em lotes muito irregulares (limitação conhecida, ver
-         CLAUDE.md) — travar no primeiro zero prendia o slider num valor
-         baixo e falso. Deixando ir até o CINDACTA, a pessoa continua vendo
-         "Área construtiva máx. = 0", que é honesto e auto-explicativo, em
-         vez de ficar sem poder mexer.
-         BUG QUE ISTO CORRIGE: renderizar() reescrevia inH.max a cada
-         resposta boa, desfazendo o teto assim que o usuário voltava pra
-         baixo — por isso a trava "não pegava". Agora o teto é calculado
-         UMA vez aqui e nunca é sobrescrito no render. */
-      var tetoCindacta = typeof est.cindacta_max_m === "number" ? est.cindacta_max_m : 0;
-      var tetoSlider = Math.max(alturaMaximaConhecida || 0, tetoCindacta);
-      if (tetoSlider > 0) inH.max = tetoSlider;
-
-      function avisarTeto(H) {
-        var partes = [];
-        if (alturaMaximaConhecida && H > alturaMaximaConhecida) partes.push("acima do limite construtivo do lote");
-        if (tetoCindacta && H > tetoCindacta) partes.push("acima do limite do CINDACTA (" + fmtBR(tetoCindacta) + " m)");
-        $("est-h-max").textContent = partes.length ? "⚠ " + partes.join(" · ") : "";
+         MUDOU (08/2026) de "o maior" pro "o menor", por dois motivos:
+         1. O "maior" criava uma ZONA MORTA: o servidor sempre calcula em
+            min(altura_pedida, altura_maxima), então acima do limite
+            geométrico o desenho CONGELAVA enquanto o número continuava
+            subindo. Medido num lote real: 32 m de curso do slider (de 43
+            a 75) sem nada acontecer — era o "slider não funciona direito".
+         2. A razão original pra usar o maior era que o algoritmo antigo
+            declarava "inconstruível" cedo demais e prendia o slider num
+            valor baixo e FALSO. Esse algoritmo foi substituído e o limite
+            geométrico agora é confiável (monotônico, verificado) — a
+            premissa que justificava o "maior" deixou de valer.
+         Os DOIS limites continuam visíveis: a legenda abaixo diz qual
+         está mandando e quanto vale o outro. */
+      var tetoCindacta = typeof est.cindacta_max_m === "number" ? est.cindacta_max_m : null;
+      var tetoGeo = alturaMaximaConhecida || 0;
+      var tetoSlider = (tetoCindacta !== null && tetoCindacta > 0)
+        ? Math.min(tetoGeo, tetoCindacta) : tetoGeo;
+      if (tetoSlider > 0) {
+        inH.max = tetoSlider;
+        if (parseFloat(inH.value) > tetoSlider) inH.value = tetoSlider;
       }
 
+      /* legenda fixa: nomeia o limite que manda e informa o outro, em vez
+         de só avisar quando o usuário esbarra nele */
+      (function () {
+        var txt;
+        if (tetoCindacta !== null && tetoCindacta > 0 && tetoCindacta < tetoGeo) {
+          txt = "máx. " + fmtBR(tetoSlider, 1) + " m — limite do CINDACTA"
+              + " (a geometria do lote comportaria " + fmtBR(tetoGeo, 1) + " m)";
+        } else if (tetoCindacta !== null && tetoCindacta > 0) {
+          txt = "máx. " + fmtBR(tetoSlider, 1) + " m — a partir daí os afastamentos"
+              + " consomem o lote (o CINDACTA permitiria " + fmtBR(tetoCindacta, 1) + " m)";
+        } else {
+          txt = "máx. " + fmtBR(tetoSlider, 1) + " m — a partir daí os afastamentos consomem o lote";
+        }
+        $("est-h-max").textContent = txt;
+      })();
+
+      ultimaAlturaOk = parseFloat(inH.value);
       atualizarNumerosEstaticos(est.desenho_inicial.area_total);
       renderizar(est.desenho_inicial, ultimaAlturaOk);
-      avisarTeto(ultimaAlturaOk);
 
       function pedirAltura(H, aoReceber) {
         fetch("/consulta/estudo", {
@@ -483,7 +499,6 @@
                que bloquear o controle sem explicar). O teto do range já
                limita o quanto dá pra subir. */
             ultimaAlturaOk = H;
-            avisarTeto(H);
             renderizar(d, H);
           });
         }, 130);

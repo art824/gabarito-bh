@@ -280,8 +280,15 @@ def consultar(lat: float, lon: float, zon, ade, via, extras=None) -> dict:
                 "distancia_m": achado["distancia_m"],
             }
             if testada_info["geometria_complexa"]:
+                # NÃO é mais "complexo demais": desde 08/2026 o recuo por
+                # diferença de buffers trata qualquer número de frentes
+                # (testado em lotes de 3 a 5 ruas). O aviso agora serve pra
+                # explicar por que há vários afastamentos frontais, não pra
+                # dizer que o cálculo falhou.
                 r["alertas"].append(
-                    f"Lote confronta com {len(testada_info['testadas'])} vias distintas — geometria complexa demais para calcular testada automaticamente; conferir manualmente."
+                    f"Lote confronta com {len(testada_info['testadas'])} vias — cada frente "
+                    "tem seu próprio afastamento frontal, conforme a classificação da via; "
+                    "confira a lista de frentes na ficha."
                 )
             if extras.get("centralidade") is not None:
                 lote_real["centralidade_local"] = not extras["centralidade"][extras["centralidade"].contains(ponto)].empty

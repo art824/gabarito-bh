@@ -783,6 +783,47 @@ vezes"). O diagnóstico foi pior do que a impressão dele:
   com `buffer(0)` sem checar o que ela virou — foi exatamente isso que
   escondeu o problema por tanto tempo.
 
+## FEITO (08/2026) — auditoria do anexo + transparência reescrita
+**Transparência (pedido: "não está claro de onde vem cada dado")**
+Os textos antigos misturavam tudo num parágrafo com jargão interno
+("ponto-em-polígono", "workspace geosiurbe", "campo AREA_M2", nomes de
+shapefile). Pior: não distinguiam o que é dado oficial do que é conta
+nossa — que é justamente o que decide se dá pra confiar. Agora cada bloco
+de fontes separa em TRÊS categorias, com selo colorido (macros `fontes()`,
+`grupo_oficial/lei/conta` em consulta.html):
+  • **Direto da fonte oficial** — copiado do cadastro da PBH, sem alteração
+  • **Da letra da lei** — valor lido na tabela do Anexo XII pelo enquadramento
+  • **Conta do Gabarito** — medido/calculado por nós (o que mais pede conferência)
+Jargão eliminado e cada item diz onde a pessoa pode conferir por conta
+própria (BHMap/SIURBE) e a data da base (julho/2026).
+
+**Anexo interativo — auditoria completa**
+- Novo `tests/diag_anexo.py`: testa o PIPELINE (não só o envelope) varrendo
+  o slider por lote e detectando 5 patologias — FALHA_PIPELINE, CONGELA,
+  NAO_MONOTONICO, VIOLA_AF, LENTO. Rodar junto com `cobertura_anexo.py`.
+- **BUG "o slider não funciona": ZONA MORTA.** O servidor calcula sempre em
+  `min(altura_pedida, altura_maxima)`, mas o teto do slider era
+  `max(geométrico, CINDACTA)`. Resultado: acima do limite geométrico o
+  desenho CONGELAVA e só o número subia. Medido num lote real: 32 m de
+  curso morto (43→75). FIX: teto = **MENOR** dos dois, e uma legenda fixa
+  nomeia qual limite manda e informa o outro ("máx. 43 m — a partir daí os
+  afastamentos consomem o lote; o CINDACTA permitiria 75 m").
+  NOTA: isso inverte o "usar o maior" pedido antes — a premissa daquele
+  pedido era que o algoritmo antigo travava o slider cedo e FALSO; com o
+  algoritmo novo (monotônico, verificado) o limite geométrico é confiável.
+- **Lotes de 3+ ruas liberados.** A trava `geometria_complexa` era herança
+  do algoritmo antigo, que quebrava nesses casos. Testado: 12/12 lotes de
+  3 a 5 ruas produzem envelope válido com afastamentos respeitados. Agora
+  desenham normalmente e a ficha lista TODAS as frentes com o AF de cada.
+  O alerta correspondente deixou de dizer "complexo demais" (virou falso).
+- **Números atuais** (amostra de 500 lotes reais): 98,4% têm testada
+  identificada; desses, 99,6% produzem envelope → **~98% dos lotes de BH
+  têm anexo funcionando** (meta do Arthur era 90%). As 2 falhas da amostra
+  eram lotes de 22 m² e 62 m², onde realmente não sobra área — não é bug.
+- Diagnóstico de pipeline em 50 lotes: 50/50 com anexo, e ZERO ocorrência
+  de congelamento, não-monotonicidade, violação de afastamento ou lentidão
+  (1ª carga: mediana 0,64 s, pior 1,29 s).
+
 ## Roteiro
 - Fase 1.5 (ATUAL): geocodificação endereço→lat/lon + bateria de testes com os
   endereços de resposta conhecida do Arthur. GATE: só ir p/ fase 2 se bater.

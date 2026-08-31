@@ -49,8 +49,10 @@ def main():
             continue
         tot["testada"] += 1
         if ti["geometria_complexa"]:
+            # 3+ ruas NÃO são mais descartadas (08/2026): o recuo por
+            # diferença de buffers trata qualquer número de frentes. Segue
+            # contabilizado à parte só pra acompanhar quantos são.
             tot["complexa"] += 1
-            continue  # 3+ ruas: fora de escopo por decisão, não conta como falha
 
         try:
             p, _ang = dl.orientar_para_desenho(poly, ti["testadas"])[:2]
