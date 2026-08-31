@@ -483,15 +483,30 @@
         fetch("/consulta/estudo", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ lat: est.lat, lon: est.lon, altura: H, altura_maxima: alturaMaximaConhecida }),
-        }).then(function (r) { return r.json(); }).then(aoReceber).catch(function () {});
+        }).then(function (r) { return r.json(); }).then(aoReceber).catch(function () {
+          // rede caiu / servidor fora: tira o "carregando" pra não ficar
+          // girando pra sempre — o desenho antigo continua na tela
+          marcarCarregando(false);
+        });
+      }
+
+      /* Estado de carregamento do desenho: entre mover o slider e o desenho
+         mudar existe o debounce (130 ms) + a ida ao servidor (o recuo
+         geométrico só é confiável com shapely, que roda lá). Sem sinal
+         nenhum nesse intervalo o anexo parece travado. */
+      var elDesenho = document.querySelector(".estudo-desenho");
+      function marcarCarregando(ligado) {
+        if (elDesenho) elDesenho.classList.toggle("desenho-carregando", ligado);
       }
 
       inH.addEventListener("input", function () {
         var H = parseFloat(inH.value);
         $("est-h-out").textContent = fmtBR(H, 1) + " m";
+        marcarCarregando(true);
         clearTimeout(fetchTimer);
         fetchTimer = setTimeout(function () {
           pedirAltura(H, function (d) {
+            marcarCarregando(false);
             if (d.erro) return;
             /* NÃO empurra mais o slider de volta: a altura pedida é sempre
                desenhada, e quando não sobra área construtiva o próprio

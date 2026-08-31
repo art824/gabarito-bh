@@ -578,6 +578,22 @@ footer /* assinatura do autor + contato — precisa ficar LEGÍVEL (antes o cont
   color: var(--grafite); margin: 12px 0 0;
 }
 
+/* desenho recalculando (slider mexido): spinner sobre o desenho, que fica
+   levemente apagado. Sem isso o anexo parecia travado no intervalo entre
+   mover o controle e a resposta do servidor chegar. */
+.estudo-desenho { position: relative; }
+.estudo-desenho.desenho-carregando #est-svg { opacity: .35; transition: opacity .12s; }
+.estudo-desenho.desenho-carregando::after {
+  content: "";
+  position: absolute; top: 50%; left: 50%;
+  width: 30px; height: 30px; margin: -15px 0 0 -15px;
+  border: 3px solid var(--linha, #C9C2B0);
+  border-top-color: var(--terra);
+  border-radius: 50%;
+  animation: carregando-girar .7s linear infinite;
+  z-index: 3;
+}
+
 /* destaques que mudam com a altura (afast. lateral + área construtiva) */
 .destaques-altura {
   display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
