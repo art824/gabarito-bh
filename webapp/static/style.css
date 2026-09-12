@@ -2043,3 +2043,29 @@ input[type="range"]::-moz-range-thumb {
 .area-caixa rect { fill: var(--tinta); }
 .area-caixa .area-valor { fill: var(--papel); font-weight: 700; }
 .area-caixa .area-rotulo { fill: rgba(242,237,224,.6); }
+
+/* ---------- construção existente (anexo interativo) ---------- */
+.leg-cor-existente { background: rgba(139, 133, 116, .35); border: 1.2px dashed #4A463C; }
+.painel-existente .gcel .k em {
+  font-style: normal; color: var(--grafite); text-transform: none; letter-spacing: 0;
+}
+.existente-sub {
+  display: block; flex: 1 0 100%;
+  font-family: var(--mono); font-size: 10px; line-height: 1.35; color: var(--grafite);
+}
+.existente-avisos { list-style: none; margin: 0; padding: 10px 12px; border-top: 1px dashed var(--linha); }
+.existente-avisos li {
+  font-size: 12.5px; line-height: 1.45; padding: 3px 0 3px 18px; position: relative;
+}
+.existente-avisos li::before { content: "⚠"; position: absolute; left: 0; color: var(--terra); }
+.existente-projetos { border-top: 1px solid var(--linha); padding: 10px 12px 12px; }
+.existente-projetos summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+.existente-projetos h5 {
+  margin: 12px 0 6px; font-family: var(--mono); font-size: 9.5px; font-weight: 500;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--grafite);
+}
+.existente-projetos ul { list-style: none; margin: 0; padding: 0; }
+.existente-projetos li { padding: 7px 0; border-bottom: 1px dotted var(--linha); font-size: 12.5px; line-height: 1.45; }
+.existente-projetos li:last-child { border-bottom: none; }
+.existente-projetos .mono { font-family: var(--mono); font-size: 10.5px; color: var(--grafite); }
+.existente-projetos a { color: var(--terra); }

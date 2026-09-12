@@ -318,3 +318,38 @@ def poligono_para_coords(poly):
     if poly.geom_type == "MultiPolygon":
         poly = max(poly.geoms, key=lambda g: g.area)
     return [list(pt) for pt in poly.exterior.coords]
+
+
+def transformacao_rigida(coords_origem, coords_destino):
+    """Rotação+translação que leva o polígono `coords_origem` exatamente em
+    cima de `coords_destino`. Os dois precisam ser o MESMO polígono, com os
+    mesmos vértices na mesma ordem (ex.: o lote em UTM e o mesmo lote girado
+    por orientar_para_desenho). Serve pra levar OUTRAS geometrias — como a
+    construção existente — pro referencial do desenho, que não guarda o giro.
+
+    Confere todos os vértices antes de devolver: se a correspondência errar
+    mais de 5 cm, devolve None. Melhor não desenhar a construção do que
+    desenhá-la deslocada dentro do lote."""
+    a = [tuple(p) for p in coords_origem]
+    b = [tuple(p) for p in coords_destino]
+    if len(a) > 1 and a[0] == a[-1]:
+        a = a[:-1]
+    if len(b) > 1 and b[0] == b[-1]:
+        b = b[:-1]
+    if len(a) != len(b) or len(a) < 2:
+        return None
+    ax, ay = a[0]
+    bx, by = b[0]
+    theta = (math.atan2(b[1][1] - by, b[1][0] - bx)
+             - math.atan2(a[1][1] - ay, a[1][0] - ax))
+    cos_t, sin_t = math.cos(theta), math.sin(theta)
+
+    def f(x, y):
+        dx, dy = x - ax, y - ay
+        return (bx + dx * cos_t - dy * sin_t, by + dx * sin_t + dy * cos_t)
+
+    for (x, y), (ex, ey) in zip(a, b):
+        fx, fy = f(x, y)
+        if math.hypot(fx - ex, fy - ey) > 0.05:
+            return None
+    return f

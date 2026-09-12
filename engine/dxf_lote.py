@@ -31,6 +31,7 @@ _COR = {
     "ENVELOPE": 1,         # vermelho
     "TAXA_PERMEAVEL": 3,   # verde
     "PROJECAO_MAXIMA": 5,  # azul
+    "EDIFICACAO_2015": 9,  # cinza claro — construção existente (voo de 2015)
     "INFO": 8,             # cinza
 }
 
@@ -118,6 +119,9 @@ def gerar_dxf(desenho: dict, poly_original, meta: dict | None = None) -> bytes:
     poli(desenho.get("envelope"), "ENVELOPE")
     poli(desenho.get("faixa_tp"), "TAXA_PERMEAVEL")
     poli(desenho.get("mancha"), "PROJECAO_MAXIMA")
+    # construção existente segundo o levantamento aéreo da PBH de 2015
+    for existente in desenho.get("existente") or []:
+        poli(existente.get("contorno"), "EDIFICACAO_2015")
 
     # bloco de texto com a procedência — o arquivo circula solto, longe do
     # site, então ele precisa dizer sozinho de onde veio e o que não é

@@ -885,7 +885,7 @@ Token Mapbox em `.env` na raiz (`MAPBOX_TOKEN=...`), nunca versionado.
   `dados_producao.zip` vive numa RELEASE do GitHub (`dados-v1`, 113 MB); o
   Render baixa a cada deploy (o nº de downloads da release ≈ nº de deploys).
   Dado novo = gerar zip novo + subir release nova.
-- **PRÓXIMO (decidido, não feito)**: "construção existente" no anexo.
+- **Construção existente no anexo** (antes "próximo", FEITO em 12/09/2026 — ver seção seguinte).
   Duas fontes complementares, ambas verificadas: `EDIFICACAO.csv` (voo de
   2015 — prova: 11.015 registros "Edificação em Construção em 2015";
   92,6% dos lotes; usar `ALTURA_ESTIMADA`, que é a versão limpa das 909
@@ -898,3 +898,40 @@ Token Mapbox em `.env` na raiz (`MAPBOX_TOKEN=...`), nunca versionado.
   usado deve vir da área construída do IPTU (somável por unidade), não de
   altura ÷ pé-direito. Aviso automático quando houver projeto aprovado ou
   `ANO_CONSTRUCAO` do IPTU posterior a 2015.
+
+## FEITO (09/2026) — construção existente no anexo interativo
+- **Dados** (`scripts/preparar_dados.py`: `edificacao_parquet()` e
+  `projetos_aprovados_parquet()`): `_cache/EDIFICACAO.parquet` (34 MB,
+  ordenado por ID_LT, coordenadas arredondadas a 10 cm — sem isso eram 75 MB;
+  desvio de área 0,36%) e `_cache/PROJETOS_APROVADOS.parquet` (1,6 MB, 82.606
+  projetos APROVADOS em 70.749 lotes, join espacial com o CTM). Consulta por
+  lote lê só o pedaço do Parquet (8 ms), nada vai pra RAM.
+- **Chave**: `db_lotes.lote_mais_proximo`/`lote_por_nulotctm` agora devolvem
+  `ID_LT` (é a chave do EDIFICACAO; `ID_LOTE_CTM` casa com `ID_LT` em 99,4%).
+- **Desenho**: `_calcular_desenho(..., com_existente=True)` só na carga inicial
+  e no DXF (o slider NÃO lê o Parquet — o que existe não muda com a altura; o
+  JS lê a camada de `est.desenho_inicial.existente`). Construções recortadas na
+  divisa e levadas ao referencial girado por `desenho_lote.transformacao_rigida`
+  (confere vértice a vértice, 5 cm; se falhar, não desenha). Camada cinza
+  tracejada `g-existente` + legenda "levantamento aéreo da Prefeitura, 2015".
+  DXF ganhou a camada `EDIFICACAO_2015`.
+- **Painel "O que já existe no lote"** (`_montar_existente` em app.py): projeção
+  e altura (voo 2015), TO atual e % da TO permitida, área construída do IPTU
+  (soma de TODAS as unidades), % do potencial básico e máximo usado (IPTU ÷
+  área×CA — nunca altura÷pé-direito), projetos aprovados separados em obra nova
+  (licenciamento) e legalização (regularização), com link pro SIATU. Avisos
+  automáticos: projeto aprovado depois de 2015, IPTU com ano > 2015, IPTU com
+  área e voo sem construção, construção em obra em 2015, altura imprecisa.
+  Acima de 100% do CA básico: nota explicando que não indica irregularidade.
+- **Conferência cruzada real**: Praça da Liberdade 153 — projeto de 1954 declara
+  4.434 m² / 14 pav.; IPTU soma 4.308 m² nas 22 unidades. Carmelo 93: voo 712 m²
+  / 7,8 m; regularização aprovada em 2025 (aviso de desatualização dispara).
+- **CORREÇÃO registrada**: o lote "1.010 m² com galpão de 3,3 m" usado como
+  exemplo em 12/09 era o NULOTCTM 200563000290, NÃO o Carmelo 93 (mesma área
+  por coincidência).
+- **Deploy**: o `dados_producao.zip` novo (148,5 MB, 45 arquivos) substitui o
+  asset da release `dados-v1` com o MESMO nome, pra URL do Render não mudar.
+  Backup do zip antigo em `dados_producao_v1_backup.zip`. `.gitignore` passou
+  a `dados_producao*.zip`. ARMADILHA: acrescentar arquivos com
+  `ZipFile(..., "a")` num cópia deste zip CORROMPEU o CRC do 1º membro;
+  refazer o zip do zero (ler cada membro e regravar) e sempre rodar `testzip()`.

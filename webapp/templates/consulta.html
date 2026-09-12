@@ -636,12 +636,14 @@
             <rect x="0" y="300" width="400" height="44" fill="url(#hx-rua-estudo)" opacity=".45"/>
             <line x1="0" y1="300" x2="400" y2="300" stroke="#14202C" stroke-width="2"/>
             <g id="g-lote"></g>
+            <g id="g-existente"></g>
             <g id="g-mancha"></g>
             <g id="g-cotas"></g>
             <g id="g-aviso"></g>
           </svg>
           <div class="leg-linhas">
             <span class="leg-linha"><i class="leg-cor leg-cor-mancha"></i><em id="leg-mancha"></em></span>
+            <span class="leg-linha" hidden><i class="leg-cor leg-cor-existente"></i><em id="leg-existente"></em></span>
             {% if estudo.af_exc %}
             <span class="leg-linha leg-nota" id="est-nota-planta">*AF por exceção da {{ estudo.af_exc_ade }}</span>
             {% endif %}
@@ -692,6 +694,69 @@
               <div class="gcel"><span class="k">Permeável mín. (TP)</span><b id="estudo-tp">—</b><i class="mono">m²</i></div>
             </div>
           </div>
+
+          {% if existente %}
+          {% macro br(v) %}{{ ('%g'|format(v))|replace('.', ',') }}{% endmacro %}
+          <div class="painel-grupo painel-existente">
+            <span class="grupo-k">O que já existe no lote</span>
+            <div class="grupo-cel">
+              {% if existente.voo %}
+              <div class="gcel"><span class="k">Projeção construída <em>· voo 2015</em></span><b>{{ br(existente.voo.projecao_m2) }}</b><i class="mono">m²</i>
+                <span class="existente-sub">{{ existente.voo.n }} construç{{ 'ão' if existente.voo.n == 1 else 'ões' }} · a mais alta com {{ br(existente.voo.altura_max_m) }} m</span></div>
+              <div class="gcel"><span class="k">Taxa de ocupação atual</span><b>{{ br(existente.voo.to_real_pct) }}</b><i class="mono">%</i>
+                {% if existente.voo.to_max_pct %}<span class="existente-sub">a lei permite {{ br(existente.voo.to_max_pct) }}% — usa {{ existente.voo.uso_da_to_pct }}% do permitido</span>{% endif %}</div>
+              {% endif %}
+              {% if existente.iptu %}
+              <div class="gcel"><span class="k">Área construída <em>· IPTU</em></span><b>{{ br(existente.iptu.area_construida_m2) }}</b><i class="mono">m²</i>
+                <span class="existente-sub">soma de {{ existente.iptu.n_unidades }} unidade{{ '' if existente.iptu.n_unidades == 1 else 's' }}</span></div>
+              {% if existente.iptu.uso_ca_bas_pct is not none %}
+              <div class="gcel"><span class="k">Potencial básico já usado</span><b>{{ existente.iptu.uso_ca_bas_pct }}</b><i class="mono">%</i>
+                <span class="existente-sub">de {{ br(existente.iptu.potencial_bas_m2) }} m²{% if existente.iptu.uso_ca_max_pct is not none %} · {{ existente.iptu.uso_ca_max_pct }}% do máximo ({{ br(existente.iptu.potencial_max_m2) }} m²){% endif %}</span>
+                {% if existente.iptu.uso_ca_bas_pct > 100 %}<span class="existente-sub">Acima de 100%: o que está construído já passa do coeficiente básico atual. É comum em prédio anterior à lei vigente ou aprovado com outorga — não indica, por si só, irregularidade.</span>{% endif %}</div>
+              {% endif %}
+              {% endif %}
+            </div>
+            {% if existente.avisos %}
+            <ul class="existente-avisos">
+              {% for aviso in existente.avisos %}<li>{{ aviso }}</li>{% endfor %}
+            </ul>
+            {% endif %}
+            {% if existente.n_licenciamentos or existente.n_regularizacoes %}
+            <details class="existente-projetos">
+              <summary>Projetos aprovados na Prefeitura ({{ existente.n_licenciamentos + existente.n_regularizacoes }})</summary>
+              {% for grupo, lista, total in [('Obra nova · licenciamento', existente.licenciamentos, existente.n_licenciamentos), ('Legalização · regularização', existente.regularizacoes, existente.n_regularizacoes)] %}
+              {% if total %}
+              <h5>{{ grupo }} ({{ total }})</h5>
+              <ul>
+                {% for p in lista %}
+                <li>
+                  <b>{{ p.titulo or 'Projeto' }}</b>{% if p.uso %} · {{ p.uso }}{% endif %}<br>
+                  <span class="mono">{% if p.data %}aprovado em {{ p.data }}{% else %}data de aprovação não informada{% endif %}{% if p.area_m2 %} · {{ br(p.area_m2) }} m²{% endif %}{% if p.pavimentos %} · {{ p.pavimentos }} pav.{% endif %}{% if p.unidades %} · {{ p.unidades }} un.{% endif %}</span>
+                  {% if p.link %} · <a href="{{ p.link }}" target="_blank" rel="noopener">ver no SIATU</a>{% endif %}
+                </li>
+                {% endfor %}
+                {% if total > lista|length %}<li class="mono">e mais {{ total - lista|length }} — consulte no SIATU</li>{% endif %}
+              </ul>
+              {% endif %}
+              {% endfor %}
+            </details>
+            {% endif %}
+            {% call fontes() %}
+              {{ grupo_oficial() }}
+              <ul>
+                <li><b>Contorno e altura das construções</b> — levantamento aéreo da Prefeitura de BH feito em <b>2015</b>. Mostra o que estava construído naquele ano: obra mais nova não aparece, e o que foi demolido depois continua aparecendo.</li>
+                <li><b>Área construída</b> — soma das áreas de todas as unidades do lote no Cadastro Imobiliário do IPTU.</li>
+                <li><b>Projetos</b> — só os com situação <b>aprovado</b> no cadastro de projetos de edificação da Prefeitura (SIATU), baixado em setembro/2026. Requerimentos e pendências não entram.</li>
+              </ul>
+              {{ grupo_conta() }}
+              <ul>
+                <li><b>Taxa de ocupação atual</b> — projeção das construções do voo de 2015 dividida pela área do lote. Tudo que tem telhado entra (garagem, cobertura), então é uma aproximação, não o cálculo da fiscalização.</li>
+                <li><b>Potencial básico já usado</b> — área construída do IPTU dividida pelo potencial do CA desta ficha. Não estimamos número de pavimentos pela altura.</li>
+                <li><b>Desenho</b> — contornos arredondados a 10 cm e recortados na divisa do lote.</li>
+              </ul>
+            {% endcall %}
+          </div>
+          {% endif %}
 
           <div class="controle-h">
             <div class="controle-h-topo">

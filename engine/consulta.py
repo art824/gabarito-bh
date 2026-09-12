@@ -94,6 +94,14 @@ def carregar_camadas():
     extras["prot_cdpcm"] = _cache_ou_none("PROTECAO_CULTURAL_CDPCM.parquet")
     extras["app"] = _cache_ou_none("APP.parquet")
 
+    # construção existente: SÓ o caminho, sem carregar na memória — a
+    # consulta lê o Parquet por lote (ver db_lotes.edificacoes_por_lote)
+    from db_lotes import CACHE as _CACHE_DB
+    for chave, nome in (("edificacao", "EDIFICACAO.parquet"),
+                        ("projetos", "PROJETOS_APROVADOS.parquet")):
+        caminho = _CACHE_DB / nome
+        extras[chave] = caminho if caminho.exists() else None
+
     return zon, ade, via, extras
 
 

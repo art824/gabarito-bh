@@ -29,11 +29,14 @@ from consulta import carregar_camadas, consultar, localizar_lote, calcular_testa
 from desenho_lote import (
     orientar_para_desenho, calcular_envelope, calcular_faixa_permeavel,
     calcular_mancha, calcular_altura_maxima, poligono_para_coords,
+    transformacao_rigida,
 )
 from dxf_lote import gerar_dxf
 from geocode import endereco_para_latlon, GeocodeError
 from indice_cadastral import buscar_por_indice, IndiceCadastralError
-from db_lotes import registros_indice_por_nulotctm
+from db_lotes import (
+    registros_indice_por_nulotctm, edificacoes_por_lote, projetos_por_nulotctm, lote_por_nulotctm,
+)
 from cindacta import consultar_altimetria_aero, CindactaError
 
 app = Flask(__name__)
@@ -352,6 +355,141 @@ def _montar_potencial(res: dict) -> dict | None:
     }
 
 
+def _valor(v):
+    """Número ou None — trata nulo, NaN e texto vazio do mesmo jeito."""
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return None if f != f else f
+
+
+def _construcoes_do_lote(id_lt, poly, poly_desenho=None) -> list:
+    """Construções do levantamento aéreo de 2015 recortadas no contorno do
+    lote. O voo e o cadastro de lotes não se alinham ao centímetro, então uma
+    construção pode "vazar" alguns cm pra fora da divisa — o recorte evita
+    desenho saindo do lote. Se `poly_desenho` vier, os contornos já saem no
+    referencial girado do anexo; se a correspondência de vértices não fechar,
+    não desenha (os números continuam valendo)."""
+    ir_para_desenho = None
+    if poly_desenho is not None:
+        ir_para_desenho = transformacao_rigida(list(poly.exterior.coords),
+                                               list(poly_desenho.exterior.coords))
+    construcoes = []
+    for e in edificacoes_por_lote(EXTRAS.get("edificacao"), id_lt):
+        recorte = e["poly"].intersection(poly)
+        for parte in getattr(recorte, "geoms", [recorte]):
+            if parte.is_empty or parte.geom_type != "Polygon" or parte.area < 2:
+                continue
+            item = {"area_m2": round(parte.area, 1), "altura_m": e["altura_m"], "obs": e["obs"]}
+            if ir_para_desenho is not None:
+                item["contorno"] = [[round(c, 3) for c in ir_para_desenho(x, y)]
+                                    for x, y in parte.exterior.coords]
+            construcoes.append(item)
+    return construcoes
+
+
+def _montar_existente(res: dict, estudo: dict | None) -> dict | None:
+    """O que já existe no lote, pra comparar com o que a lei permite.
+
+    Três fontes, que NÃO se substituem (medido em 09/2026):
+    - levantamento aéreo da PBH (EDIFICACAO): contorno e altura do que estava
+      construído em 2015 — cobre ~93% dos lotes, mas tem 11 anos;
+    - projetos APROVADOS na Prefeitura: atualizado até a véspera do download,
+      com pavimentos e área oficiais — cobre ~20% dos lotes;
+    - área construída declarada no IPTU (soma de TODAS as unidades do lote):
+      é a base do "% do potencial usado". Nunca estimada por altura ÷ pé-direito.
+    Toda conta nossa sai rotulada como tal no template."""
+    lote_real = res.get("lote_real") or {}
+    nulot = lote_real.get("nulotctm")
+    area_lote = _valor(lote_real.get("area_m2"))
+    if not nulot or not area_lote:
+        return None
+    estudo = estudo or {}
+
+    desenho = estudo.get("desenho_inicial") or {}
+    construcoes = desenho.get("existente")
+    if construcoes is None:
+        # sem desenho (anexo indisponível): os números saem mesmo assim
+        achado = lote_por_nulotctm(EXTRAS.get("lote_ctm"), nulot)
+        construcoes = _construcoes_do_lote(achado["row"].get("ID_LT"), achado["poly"]) if achado else []
+
+    voo = None
+    if construcoes:
+        projecao = sum(c["area_m2"] for c in construcoes)
+        to_real = 100 * projecao / area_lote
+        to_max = _valor(estudo.get("to_pct"))
+        voo = {
+            "n": len(construcoes),
+            "projecao_m2": round(projecao, 1),
+            "altura_max_m": max(c["altura_m"] for c in construcoes),
+            "to_real_pct": round(to_real, 1),
+            "to_max_pct": to_max,
+            "uso_da_to_pct": round(100 * to_real / to_max) if to_max else None,
+            "em_obra_2015": any(c["obs"] == 1 for c in construcoes),
+            "altura_imprecisa": any(c["obs"] == 2 for c in construcoes),
+        }
+
+    registros = registros_indice_por_nulotctm(EXTRAS.get("indice_cadastral"), nulot)
+    area_iptu = sum(_valor(r.get("AREA_CONSTRUCAO")) or 0 for r in registros)
+    anos = [int(a) for a in (_valor(r.get("ANO_CONSTRUCAO")) for r in registros) if a and a >= 1800]
+    iptu = None
+    if area_iptu > 0:
+        ca_bas, ca_max = _valor(estudo.get("ca_bas")), _valor(estudo.get("ca_max"))
+        iptu = {
+            "area_construida_m2": round(area_iptu, 1),
+            "n_unidades": len(registros),
+            "potencial_bas_m2": round(area_lote * ca_bas) if ca_bas else None,
+            "potencial_max_m2": round(area_lote * ca_max) if ca_max else None,
+            "uso_ca_bas_pct": round(100 * area_iptu / (area_lote * ca_bas)) if ca_bas else None,
+            "uso_ca_max_pct": round(100 * area_iptu / (area_lote * ca_max)) if ca_max else None,
+            "ano_mais_recente": max(anos) if anos else None,
+        }
+
+    def _projeto(p):
+        d = p.get("dt_aprovacao") or ""
+        und = (_valor(p.get("unidades_res")) or 0) + (_valor(p.get("unidades_nao_res")) or 0)
+        pav = _valor(p.get("pavimentos"))
+        return {
+            "data": f"{d[8:10]}/{d[5:7]}/{d[:4]}" if len(d) == 10 else None,
+            "ano": int(d[:4]) if len(d) == 10 else None,
+            "titulo": (p.get("titulo") or "").capitalize() or None,
+            "uso": (p.get("uso") or "").capitalize() or None,
+            "area_m2": _valor(p.get("area_construida_m2")),
+            "pavimentos": int(pav) if pav else None,
+            "unidades": int(und) if und else None,
+            "link": p.get("link_siatu") or None,
+        }
+
+    projetos = projetos_por_nulotctm(EXTRAS.get("projetos"), nulot)
+    licenciamentos = [_projeto(p) for p in projetos if p.get("tipo") == "LICENCIAMENTO"]
+    regularizacoes = [_projeto(p) for p in projetos if p.get("tipo") == "REGULARIZACAO"]
+
+    avisos = []
+    anos_projetos = [p["ano"] for p in licenciamentos + regularizacoes if p["ano"]]
+    if anos_projetos and max(anos_projetos) > 2015:
+        avisos.append(f"Há projeto aprovado na Prefeitura em {max(anos_projetos)} neste lote, depois do "
+                      "levantamento aéreo de 2015: o desenho da construção existente pode estar desatualizado.")
+    elif iptu and iptu["ano_mais_recente"] and iptu["ano_mais_recente"] > 2015:
+        avisos.append(f"O IPTU registra construção de {iptu['ano_mais_recente']} neste lote, depois do "
+                      "levantamento aéreo de 2015: o desenho pode estar desatualizado.")
+    if iptu and not construcoes:
+        avisos.append("O IPTU registra área construída, mas o levantamento aéreo de 2015 não mostra "
+                      "construção neste lote — a obra pode ser posterior ao voo.")
+    if voo and voo["em_obra_2015"]:
+        avisos.append("Em 2015 havia construção em obra neste lote: a altura registrada no voo não é a final.")
+    if voo and voo["altura_imprecisa"]:
+        avisos.append("A própria Prefeitura marca como imprecisa a altura de alguma construção deste lote.")
+
+    if not (voo or iptu or licenciamentos or regularizacoes):
+        return None
+    return {
+        "voo": voo, "iptu": iptu, "avisos": avisos,
+        "licenciamentos": licenciamentos[:6], "n_licenciamentos": len(licenciamentos),
+        "regularizacoes": regularizacoes[:6], "n_regularizacoes": len(regularizacoes),
+    }
+
+
 # Retângulo que contém Belo Horizonte (com folga). Um link compartilhável
 # com ponto fora daqui é recusado antes de qualquer consulta.
 _BH_LAT = (-20.10, -19.75)
@@ -627,7 +765,7 @@ def consulta_page():
     if estudo is not None:
         estudo["lat"] = g["lat"]
         estudo["lon"] = g["lon"]
-        estudo["desenho_inicial"] = _calcular_desenho(g["lat"], g["lon"], 9.0, res=res)
+        estudo["desenho_inicial"] = _calcular_desenho(g["lat"], g["lon"], 9.0, res=res, com_existente=True)
         # FALHA HONESTA (princípio da K2): melhor "indisponível" do que um
         # desenho possivelmente errado. Três estados em que não confiamos no
         # desenho automático — cai no modo manual com aviso explícito.
@@ -656,6 +794,7 @@ def consulta_page():
         res, EXTRAS,
         indice_consultado=contexto["indice_cadastral"] if modo == "indice" else None,
     )
+    contexto["existente"] = _montar_existente(res, estudo)
     contexto["cindacta"] = _montar_cindacta(g["lat"], g["lon"])
     contexto["veredito"] = _montar_veredito(res, contexto["cindacta"])
     # a altura do CINDACTA também entra no estudo interativo: é um dos dois
@@ -671,7 +810,8 @@ def consulta_page():
 
 
 def _calcular_desenho(lat: float, lon: float, altura: float, res: dict | None = None,
-                       altura_maxima_conhecida: float | None = None) -> dict | None:
+                       altura_maxima_conhecida: float | None = None,
+                       com_existente: bool = False) -> dict | None:
     """Núcleo geométrico do anexo interativo — usado tanto no primeiro
     render (`/consulta`, altura padrão) quanto nas atualizações do slider
     (`/consulta/estudo`). Sempre relocaliza o lote (barato, local) em vez
@@ -736,6 +876,13 @@ def _calcular_desenho(lat: float, lon: float, altura: float, res: dict | None = 
     if not inconstruivel:
         mancha, limitante = calcular_mancha(envelope, faixa_tp, to_m2_max)
 
+    # construção existente (voo de 2015) levada pro MESMO referencial do
+    # desenho. Só quando pedido: o que já está construído não muda com a
+    # altura, então as chamadas do slider não pagam essa leitura.
+    existente = None
+    if com_existente:
+        existente = _construcoes_do_lote(achado["row"].get("ID_LT"), poly, poly_d)
+
     return {
         "inconstruivel": inconstruivel,
         "lateral_m": round(lateral_m, 2),
@@ -753,6 +900,7 @@ def _calcular_desenho(lat: float, lon: float, altura: float, res: dict | None = 
         "mancha": poligono_para_coords(mancha) if mancha is not None else None,
         "mancha_area": round(mancha.area, 1) if mancha is not None else None,
         "mancha_limitante": limitante,
+        "existente": existente,
     }
 
 
@@ -802,7 +950,7 @@ def consulta_dxf():
     except (TypeError, ValueError):
         altura = 9.0
 
-    desenho = _calcular_desenho(lat, lon, altura)
+    desenho = _calcular_desenho(lat, lon, altura, com_existente=True)
     if desenho is None:
         return "lote não identificado — não há desenho para exportar", 422
 

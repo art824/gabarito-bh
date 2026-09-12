@@ -334,6 +334,21 @@
 
       gLote.appendChild(svgEl("path", { d: pathD(d.contorno, tr), fill: "#FBF8F0", stroke: "#14202C", "stroke-width": "2" }));
 
+      /* construção existente (levantamento aéreo de 2015). Camada FIXA: o
+         slider não muda o que já está construído, então as respostas do
+         slider não trazem essa camada — ela vem só da carga inicial (est). */
+      if ($("g-existente")) {
+        var gExist = limparGrupo("g-existente");
+        var existentes = (temPoligono && est.desenho_inicial && est.desenho_inicial.existente) || [];
+        existentes.forEach(function (e) {
+          gExist.appendChild(svgEl("path", {
+            d: pathD(e.contorno, tr), fill: "#8B8574", "fill-opacity": ".35",
+            stroke: "#4A463C", "stroke-width": "1.2", "stroke-dasharray": "4 2",
+          }));
+        });
+        legenda("leg-existente", existentes.length ? "Construção existente (levantamento aéreo da Prefeitura, 2015)" : "");
+      }
+
       if (d.inconstruivel) {
         legenda("leg-mancha", "");
         var bb = bbox(d.contorno);

@@ -46,7 +46,7 @@ def lote_mais_proximo(con, x: float, y: float, limiar_m: float):
         return None
     row = con.execute(
         """
-        SELECT NULOTCTM, ID_QUADRA_CTM, AREA_M2, ST_AsWKB(geom) AS wkb,
+        SELECT NULOTCTM, ID_QUADRA_CTM, AREA_M2, ID_LT, ST_AsWKB(geom) AS wkb,
                ST_Distance(geom, ST_Point(?, ?)) AS dist
         FROM lotes
         WHERE ST_DWithin(geom, ST_Point(?, ?), ?)
@@ -57,9 +57,9 @@ def lote_mais_proximo(con, x: float, y: float, limiar_m: float):
     ).fetchone()
     if row is None:
         return None
-    nulotctm, id_quadra, area_m2, geom_wkb, dist = row
+    nulotctm, id_quadra, area_m2, id_lt, geom_wkb, dist = row
     return {
-        "row": {"NULOTCTM": nulotctm, "ID_QUADRA_CTM": id_quadra, "AREA_M2": area_m2},
+        "row": {"NULOTCTM": nulotctm, "ID_QUADRA_CTM": id_quadra, "AREA_M2": area_m2, "ID_LT": id_lt},
         "poly": _wkb.loads(bytes(geom_wkb)),
         "distancia_m": round(float(dist), 1),
     }
@@ -95,14 +95,55 @@ def lote_por_nulotctm(con, nulotctm: str):
     if con is None or not nulotctm:
         return None
     row = con.execute(
-        "SELECT NULOTCTM, ID_QUADRA_CTM, AREA_M2, ST_AsWKB(geom) AS wkb "
+        "SELECT NULOTCTM, ID_QUADRA_CTM, AREA_M2, ID_LT, ST_AsWKB(geom) AS wkb "
         "FROM lotes WHERE NULOTCTM = ? LIMIT 1",
         [nulotctm],
     ).fetchone()
     if row is None:
         return None
-    nulotctm_, id_quadra, area_m2, geom_wkb = row
+    nulotctm_, id_quadra, area_m2, id_lt, geom_wkb = row
     return {
-        "row": {"NULOTCTM": nulotctm_, "ID_QUADRA_CTM": id_quadra, "AREA_M2": area_m2},
+        "row": {"NULOTCTM": nulotctm_, "ID_QUADRA_CTM": id_quadra, "AREA_M2": area_m2, "ID_LT": id_lt},
         "poly": _wkb.loads(bytes(geom_wkb)),
     }
+
+
+def edificacoes_por_lote(caminho_parquet, id_lt):
+    """Construções do levantamento aéreo de 2015 (EDIFICACAO) de um lote, pela
+    chave ID_LT do CTM (o join por essa chave bate em 99,4% das construções).
+    Lê direto do Parquet, que está ORDENADO por ID_LT: só o pedaço do arquivo
+    com esse lote é lido, nada fica na RAM. Lista vazia se o arquivo não
+    existir ou se o lote não tiver construção registrada no voo."""
+    if not caminho_parquet or id_lt is None:
+        return []
+    con = duckdb.connect()
+    try:
+        linhas = con.execute(
+            f"SELECT area_m2, altura_m, obs, wkb FROM read_parquet('{Path(caminho_parquet).as_posix()}') "
+            "WHERE ID_LT = ?",
+            [int(id_lt)],
+        ).fetchall()
+    finally:
+        con.close()
+    return [{"area_m2": float(a), "altura_m": float(h), "obs": int(o), "poly": _wkb.loads(bytes(w))}
+            for a, h, o, w in linhas]
+
+
+def projetos_por_nulotctm(caminho_parquet, nulotctm):
+    """Projetos de edificação APROVADOS na Prefeitura cujo terreno cai nesse
+    lote (o join espacial é feito uma vez só, no preparar_dados). Mais recente
+    primeiro. Lista vazia se o arquivo não existir."""
+    if not caminho_parquet or not nulotctm:
+        return []
+    con = duckdb.connect()
+    try:
+        cur = con.execute(
+            f"SELECT * FROM read_parquet('{Path(caminho_parquet).as_posix()}') WHERE NULOTCTM = ?",
+            [str(nulotctm)],
+        )
+        colunas = [d[0] for d in cur.description]
+        linhas = [dict(zip(colunas, r)) for r in cur.fetchall()]
+    finally:
+        con.close()
+    linhas.sort(key=lambda r: str(r.get("dt_aprovacao") or ""), reverse=True)
+    return linhas

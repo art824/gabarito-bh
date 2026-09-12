@@ -171,6 +171,115 @@ def construir_db_indice():
     print(f"  INDICE_CADASTRAL.parquet -> indice_cadastral.duckdb: {time.time()-t0:.1f}s")
 
 
+def edificacao_parquet():
+    """EDIFICACAO.csv (levantamento aéreo da PBH de 2015: contorno e altura de
+    cada construção) -> EDIFICACAO.parquet, ORDENADO por lote (ID_LT) pra
+    consulta pontual ler só um pedaço do arquivo.
+
+    Decisões medidas em 09/2026:
+    - ALTURA_ESTIMADA, não ALTURA_CALCULADA: as duas só divergem nas 909
+      alturas negativas, e a ESTIMADA é a versão corrigida (mínimo 0);
+    - descarta altura < 1,5 m e área < 4 m² (ruído do modelo de elevação);
+    - coordenadas arredondadas a 10 cm: o arquivo cai de 75 MB para 34 MB,
+      com desvio médio de área de 0,36% nas construções >= 20 m². É o que
+      mantém o zip de produção leve;
+    - OBSERVACAO vira código (os textos vêm com acento corrompido no CSV):
+      1 = "Edificação em Construção em 2015", 2 = "altura imprecisa"."""
+    origem = CACHE.parent / "EDIFICACAO.csv"
+    if not origem.exists():
+        print("  PULADO — EDIFICACAO.csv não existe")
+        return
+    destino = CACHE / "EDIFICACAO.parquet"
+    t0 = time.time()
+    con = duckdb.connect()
+    con.execute("INSTALL spatial; LOAD spatial;")
+    con.execute(f"""
+        COPY (
+          SELECT CAST(ID_LOTE_CTM AS BIGINT) AS ID_LT,
+                 CAST(round(AREA, 1) AS FLOAT) AS area_m2,
+                 CAST(round(ALTURA_ESTIMADA, 1) AS FLOAT) AS altura_m,
+                 CASE WHEN OBSERVACAO ILIKE '%constru%' THEN 1
+                      WHEN OBSERVACAO ILIKE '%imprecis%' THEN 2 ELSE 0 END::TINYINT AS obs,
+                 ST_AsWKB(ST_ReducePrecision(ST_GeomFromText(GEOMETRIA), 0.1)) AS wkb
+          FROM read_csv('{origem.as_posix()}', header=true, ignore_errors=true)
+          WHERE ALTURA_ESTIMADA >= 1.5 AND AREA >= 4
+          ORDER BY ID_LT
+        ) TO '{destino.as_posix()}' (FORMAT parquet, COMPRESSION zstd, COMPRESSION_LEVEL 19, ROW_GROUP_SIZE 8000)
+    """)
+    con.close()
+    print(f"  EDIFICACAO.csv -> EDIFICACAO.parquet: {destino.stat().st_size/1e6:.1f} MB em {time.time()-t0:.1f}s")
+
+
+def projetos_aprovados_parquet():
+    """PROJETO_EDIFICACAO_LICENCIADO (shapefile da PBH com os projetos de
+    edificação, atualizado até a véspera do download) -> PROJETOS_APROVADOS.parquet,
+    uma linha por projeto com o NULOTCTM do lote onde ele cai.
+
+    - só SITUACAO_P == "APROVADO" (decisão do Arthur: requerimento e
+      pendência não entram — "em análise" não é "aprovado");
+    - TIPO separa LICENCIAMENTO (obra nova) de REGULARIZACAO (legalização);
+    - join ESPACIAL (ponto representativo do projeto dentro do lote do CTM):
+      o campo LOTE_PROJE é texto da planta de parcelamento e não casa com o
+      CTM. Medido: 99,9% dos projetos caem num lote;
+    - data de aprovação = DT_CONCESS, e DATA_APROV (dd/mm/aaaa) quando falta;
+    - QTDE_PAVIM fora de 1..60 vira nulo (há valores como 403);
+    - LDID=0 no .dbf: atributos lidos por _ler_dbf_latin1."""
+    from datetime import date
+    shp = CACHE.parent / "PROJETO_EDIFICACAO_LICENCIADO" / "PROJETO_EDIFICACAO_LICENCIADO.shp"
+    if not shp.exists():
+        print("  PULADO — shapefile PROJETO_EDIFICACAO_LICENCIADO não existe")
+        return
+    banco_lotes = CACHE / "lotes.duckdb"
+    if not banco_lotes.exists():
+        print("  PULADO — lotes.duckdb precisa existir antes (é usado no join espacial)")
+        return
+    t0 = time.time()
+    g = gpd.read_file(shp, columns=[]).reset_index(drop=True)
+    at = _ler_dbf_latin1(shp.with_suffix(".dbf")).reset_index(drop=True)
+
+    def limpo(serie):
+        return serie.astype(str).str.replace("\x00", "", regex=False).str.strip()
+
+    ok = limpo(at["SITUACAO_P"]) == "APROVADO"
+    g, at = g[ok].reset_index(drop=True), at[ok].reset_index(drop=True)
+    rp = g.geometry.representative_point()
+    pts = pd.DataFrame({"i": range(len(g)), "x": rp.x, "y": rp.y})
+    con = duckdb.connect(str(banco_lotes), read_only=True)
+    con.execute("LOAD spatial;")
+    con.register("pts", pts)
+    lotes = con.execute(
+        "SELECT p.i, l.NULOTCTM FROM pts p JOIN lotes l ON ST_Contains(l.geom, ST_Point(p.x, p.y))"
+    ).df()
+    con.close()
+
+    def data_iso(serie):
+        s = limpo(serie)
+        ano = pd.to_numeric(s.str[:4], errors="coerce")
+        valida = (s.str.len() == 8) & (ano >= 1900) & (ano <= date.today().year)
+        return (s.str[:4] + "-" + s.str[4:6] + "-" + s.str[6:8]).where(valida)
+
+    partes = limpo(at["DATA_APROV"]).str.extract(r"^(\d{2})/(\d{2})/(\d{4})$")
+    aprov_alternativa = (partes[2] + "-" + partes[1] + "-" + partes[0]).where(partes[2].notna())
+    pav = pd.to_numeric(at["QTDE_PAVIM"], errors="coerce")
+    tabela = pd.DataFrame({
+        "numero_projeto": limpo(at["NUMERO_PRO"]),
+        "tipo": limpo(at["TIPO"]),
+        "titulo": limpo(at["TITULO_PRO"]),
+        "uso": limpo(at["USO_GERAL"]),
+        "dt_aprovacao": data_iso(at["DT_CONCESS"]).fillna(aprov_alternativa),
+        "area_construida_m2": pd.to_numeric(at["AREA_CONST"], errors="coerce"),
+        "pavimentos": pav.where((pav >= 1) & (pav <= 60)),
+        "unidades_res": pd.to_numeric(at["QTD_UND_RE"], errors="coerce"),
+        "unidades_nao_res": pd.to_numeric(at["QTD_UND_NA"], errors="coerce"),
+        "link_siatu": limpo(at["LINK_SIATU"]).str.extract(r'href="([^"]+)"')[0],
+    })
+    tabela = lotes.merge(tabela.reset_index().rename(columns={"index": "i"}), on="i").drop(columns="i")
+    destino = CACHE / "PROJETOS_APROVADOS.parquet"
+    tabela.sort_values("NULOTCTM").to_parquet(destino, compression="zstd", index=False)
+    print(f"  PROJETO_EDIFICACAO_LICENCIADO -> PROJETOS_APROVADOS.parquet: {len(tabela)} projetos "
+          f"em {tabela.NULOTCTM.nunique()} lotes, {destino.stat().st_size/1e6:.1f} MB, {time.time()-t0:.1f}s")
+
+
 if __name__ == "__main__":
     CACHE.mkdir(parents=True, exist_ok=True)
     print("Preparando camadas (Parquet/GeoParquet)...")
@@ -192,4 +301,6 @@ if __name__ == "__main__":
     indice_cadastral_parquet()
     construir_db_lotes()
     construir_db_indice()
+    edificacao_parquet()
+    projetos_aprovados_parquet()
     print("Concluído.")
