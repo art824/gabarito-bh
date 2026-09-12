@@ -17,7 +17,7 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE / "engine"))
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, Response
 import geopandas as gpd
 from shapely.geometry import Point
 
@@ -26,6 +26,7 @@ from desenho_lote import (
     orientar_para_desenho, calcular_envelope, calcular_faixa_permeavel,
     calcular_mancha, calcular_altura_maxima, poligono_para_coords,
 )
+from dxf_lote import gerar_dxf
 from geocode import endereco_para_latlon, GeocodeError
 from indice_cadastral import buscar_por_indice, IndiceCadastralError
 from db_lotes import registros_indice_por_nulotctm
@@ -703,6 +704,52 @@ def consulta_estudo():
     if desenho is None:
         return jsonify({"erro": "lote não identificado ou geometria complexa demais"}), 422
     return jsonify(desenho)
+
+
+@app.route("/consulta/dxf", methods=["GET"])
+def consulta_dxf():
+    """Baixa o estudo do lote em DXF, pra abrir no CAD.
+
+    É GET (link simples, sem JS) porque o navegador já sabe baixar um link
+    — e porque o arquivo é derivado só de lat/lon/altura, sem efeito
+    colateral nenhum. As coordenadas saem em UTM real; ver engine/dxf_lote.py.
+    """
+    try:
+        lat = float(request.args.get("lat"))
+        lon = float(request.args.get("lon"))
+    except (TypeError, ValueError):
+        return "parâmetros inválidos", 400
+    try:
+        altura = float(request.args.get("altura", 9))
+    except (TypeError, ValueError):
+        altura = 9.0
+
+    desenho = _calcular_desenho(lat, lon, altura)
+    if desenho is None:
+        return "lote não identificado — não há desenho para exportar", 422
+
+    # o polígono ORIGINAL (não girado) é o que permite devolver o desenho
+    # ao UTM de verdade; relocalizar é barato (consulta indexada)
+    ponto = gpd.GeoSeries([Point(lon, lat)], crs="EPSG:4326").to_crs(CRS_DADOS).iloc[0]
+    achado = localizar_lote(ponto, EXTRAS.get("lote_ctm"))
+    if achado is None:
+        return "lote não identificado — não há desenho para exportar", 422
+
+    indice = (request.args.get("indice") or "").strip()
+    nulot = str(achado.get("row", {}).get("NULOTCTM") or "").strip()
+    conteudo = gerar_dxf(desenho, achado["poly"], {
+        "indice": indice or nulot,
+        "endereco": (request.args.get("endereco") or "").strip(),
+        "data": date.today().strftime("%d/%m/%Y"),
+    })
+
+    rotulo = re.sub(r"[^0-9A-Za-z]+", "", indice or nulot) or "lote"
+    nome = f"gabarito_{rotulo}_{int(round(desenho.get('altura_usada') or altura))}m.dxf"
+    return Response(
+        conteudo,
+        mimetype="image/vnd.dxf",
+        headers={"Content-Disposition": f'attachment; filename="{nome}"'},
+    )
 
 
 def _entregar_relato(registro: dict) -> None:

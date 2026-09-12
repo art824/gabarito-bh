@@ -617,6 +617,17 @@ footer /* assinatura do autor + contato — precisa ficar LEGÍVEL (antes o cont
   .destaques-altura { grid-template-columns: 1fr; }
 }
 
+/* baixar o estudo em DXF (abre no CAD) */
+.estudo-dxf {
+  border: 1.5px solid var(--tinta); border-top: none;
+  background: var(--papel-vivo); padding: 14px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.estudo-dxf .mono {
+  font-family: var(--mono); font-size: 10.5px; line-height: 1.4;
+  color: var(--grafite); flex: 1 1 190px;
+}
+
 /* ---------- Mobile ---------- */
 @media (max-width: 900px) {
   .hero .container { grid-template-columns: 1fr; gap: 40px; }
@@ -1189,7 +1200,7 @@ input[type="range"]::-moz-range-thumb {
   .erro, .skeleton-ficha, .modal-fundo,
   .btn-exportar, .ficha-rodape-export, .botao-cel, .botao-inline,
   .report-btn, .reportar-popover, .info-btn, .info-popover,
-  .estudo-desenho, .controle-h, .destaques-altura, .estudo-veu,
+  .estudo-desenho, .controle-h, .destaques-altura, .estudo-veu, .estudo-dxf,
   .fsec-estudo .estudo-painel .painel-grupo:last-of-type,
   input[type="range"] {
     display: none !important;

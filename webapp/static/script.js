@@ -499,9 +499,26 @@
         if (elDesenho) elDesenho.classList.toggle("desenho-carregando", ligado);
       }
 
+      /* link do DXF: o arquivo é gerado pra UMA altura, então o href tem que
+         acompanhar o slider — senão a pessoa baixa um envelope diferente do
+         que está vendo na tela. */
+      var linkDxf = document.getElementById("baixar-dxf");
+      function atualizarLinkDxf(H) {
+        if (!linkDxf) return;
+        var p = "lat=" + encodeURIComponent(est.lat) +
+                "&lon=" + encodeURIComponent(est.lon) +
+                "&altura=" + encodeURIComponent(H);
+        var ind = linkDxf.getAttribute("data-indice");
+        if (ind) p += "&indice=" + encodeURIComponent(ind);
+        linkDxf.href = "/consulta/dxf?" + p;
+      }
+      atualizarLinkDxf(parseFloat(inH.value));
+      if (linkDxf) linkDxf.addEventListener("click", function () { ga("baixou_dxf"); });
+
       inH.addEventListener("input", function () {
         var H = parseFloat(inH.value);
         $("est-h-out").textContent = fmtBR(H, 1) + " m";
+        atualizarLinkDxf(H);
         marcarCarregando(true);
         clearTimeout(fetchTimer);
         fetchTimer = setTimeout(function () {
@@ -627,43 +644,6 @@
         }).catch(function () {});
       });
     }
-  }
-
-  /* ---------- 7. Exportar ficha (popup visual + impressão) ----------
-     Abre no clique de QUALQUER botão de exportar (topo ou rodapé) OU
-     sozinho após 1 min navegando na ficha (só uma vez, só se o usuário
-     ainda não interagiu com o modal de nenhum jeito). */
-  var botoesExport = document.querySelectorAll(".btn-exportar");
-  if (botoesExport.length) {
-    var modal = document.getElementById("modal-export");
-    var interagiu = false;
-
-    function abrirModal() { modal.hidden = false; }
-    function fecharModal() { modal.hidden = true; }
-
-    botoesExport.forEach(function (btn) {
-      btn.addEventListener("click", function () { interagiu = true; abrirModal(); });
-    });
-    modal.querySelectorAll("[data-fechar]").forEach(function (el) {
-      el.addEventListener("click", function () { interagiu = true; fecharModal(); });
-    });
-    modal.addEventListener("click", function (e) {
-      if (e.target === modal) { interagiu = true; fecharModal(); } /* clique fora da caixa */
-    });
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && !modal.hidden) { interagiu = true; fecharModal(); }
-    });
-    document.getElementById("btn-export-confirmar").addEventListener("click", function () {
-      interagiu = true;
-      ga("exportar_pdf");
-      fecharModal();
-      setTimeout(function () { window.print(); }, 120);
-    });
-
-    /* automático, só se o usuário ainda não interagiu com o modal de nenhum jeito */
-    setTimeout(function () {
-      if (!interagiu) abrirModal();
-    }, 60000);
   }
 
   /* ---------- 6b. Alternância de aba endereço / índice cadastral ---------- */

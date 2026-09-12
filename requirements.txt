@@ -7,3 +7,4 @@ python-dotenv==1.2.2
 pyarrow==24.0.0
 duckdb==1.5.4
 gunicorn==26.0.0
+ezdxf==1.4.4
