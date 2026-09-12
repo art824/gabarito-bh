@@ -856,3 +856,45 @@ python engine/consulta.py --endereco "Praça da Liberdade"   # teste por endere�
 python webapp/app.py                              # sobe o site local (localhost:5000)
 ```
 Token Mapbox em `.env` na raiz (`MAPBOX_TOKEN=...`), nunca versionado.
+
+## FEITO (09/2026) — DXF para CAD + link compartilhável da ficha
+- **Export DXF** (`engine/dxf_lote.py`, rota `GET /consulta/dxf`, botão
+  "Baixar para CAD" no anexo). Sai em UTM REAL (SIRGAS 2000 / 23S), não no
+  referencial girado do desenho: a volta usa dois vértices correspondentes
+  (contorno girado × polígono do CTM, mesma ordem) e `_validar()` confere
+  vértice a vértice (tolerância 5 cm; se falhar, sai em coordenada local
+  com aviso no arquivo). Camadas LOTE/ENVELOPE/TAXA_PERMEAVEL/
+  PROJECAO_MAXIMA/INFO, `$INSUNITS=6`. O href acompanha o slider (o DXF é
+  de UMA altura). `ezdxf` é Python puro — mesmo critério que descartou
+  WeasyPrint. DECISÃO do Arthur: DXF fica GRATUITO (diferente do PDF, que
+  foi retirado): é matéria-prima por lote, puxa a pessoa de volta.
+- **Link compartilhável**: `/consulta` aceita GET `?indice=` ou `?lat=&lon=`
+  (endereço por extenso NÃO, pra não gastar Mapbox a cada abertura; ponto
+  fora do retângulo de BH é recusado). O script faz `history.replaceState`
+  pro link, então a barra do navegador já é compartilhável; botão "Copiar
+  link desta ficha" com plano B (prompt) se a área de transferência negar.
+- **Proteção contra bloqueio da PBH** (condição do Arthur pra liberar o
+  link): `_montar_cindacta` tem cache por ponto (6 h) e FREIO de 30
+  consultas novas/min por processo — passou, CINDACTA vira "não
+  verificado" em vez de insistir. Falha não entra no cache. Testado com PBH
+  falsa: 40 lotes/min → 30 chamadas + 10 freadas.
+- **Robôs fora das fichas**: `/robots.txt` com `Disallow: /consulta` +
+  `noindex` nas fichas. Liberar o Google nas fichas é decisão SEPARADA,
+  ainda não tomada (se for, sitemap pequeno e só depois de medir o freio).
+- **Deploy dos dados** (achado nesta rodada, estava fora do repo): o zip
+  `dados_producao.zip` vive numa RELEASE do GitHub (`dados-v1`, 113 MB); o
+  Render baixa a cada deploy (o nº de downloads da release ≈ nº de deploys).
+  Dado novo = gerar zip novo + subir release nova.
+- **PRÓXIMO (decidido, não feito)**: "construção existente" no anexo.
+  Duas fontes complementares, ambas verificadas: `EDIFICACAO.csv` (voo de
+  2015 — prova: 11.015 registros "Edificação em Construção em 2015";
+  92,6% dos lotes; usar `ALTURA_ESTIMADA`, que é a versão limpa das 909
+  negativas; 1,13% "altura imprecisa") e `PROJETO_EDIFICACAO_LICENCIADO`
+  (shapefile que o Arthur trouxe em 12/09/2026: 84.936 projetos, emissão
+  mais recente 11/09/2026, `QTDE_PAVIM` real, `AREA_CONST`, cai em lote do
+  CTM em 99,9% por join espacial, cobre 19,7% dos lotes; LDID=0 → ler DBF
+  com `_ler_dbf_latin1`). DECISÕES do Arthur: mostrar SÓ `SITUACAO_P =
+  APROVADO` e SEPARAR licenciamento (obra nova) de regularização. % do CA
+  usado deve vir da área construída do IPTU (somável por unidade), não de
+  altura ÷ pé-direito. Aviso automático quando houver projeto aprovado ou
+  `ANO_CONSTRUCAO` do IPTU posterior a 2015.
