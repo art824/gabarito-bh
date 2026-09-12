@@ -646,6 +646,29 @@
     }
   }
 
+  /* ---------- 6a. Link compartilhável da ficha ----------
+     A ficha chega por POST (formulário), então a barra do navegador fica só
+     com /consulta. Troca pelo link que reabre ESTA ficha: copiar a URL,
+     favoritar ou compartilhar pelo celular passa a funcionar sozinho. */
+  var btnLink = document.getElementById("copiar-link");
+  if (btnLink) {
+    var permalink = btnLink.getAttribute("data-permalink");
+    try { history.replaceState(null, "", permalink); } catch (e) {}
+    btnLink.addEventListener("click", function () {
+      var url = location.origin + permalink;
+      var copiado = function () {
+        btnLink.textContent = "Link copiado ✓";
+        setTimeout(function () { btnLink.textContent = "Copiar link desta ficha"; }, 2200);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(copiado, function () { window.prompt("Copie o link:", url); });
+      } else {
+        window.prompt("Copie o link:", url);
+      }
+      ga("link_copiado");
+    });
+  }
+
   /* ---------- 6b. Alternância de aba endereço / índice cadastral ---------- */
   var modosBusca = document.getElementById("modos-busca");
   if (modosBusca) {

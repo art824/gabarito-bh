@@ -115,6 +115,9 @@
 
     <div class="geocodificado">
       <span>Endereço confirmado: <b>{{ resultado.geocodificado_como }}</b></span>
+      {% if permalink %}
+      <button type="button" class="botao botao-mini" id="copiar-link" data-permalink="{{ permalink }}">Copiar link desta ficha</button>
+      {% endif %}
     </div>
 
     {% if resultado.zoneamento %}

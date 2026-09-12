@@ -11,8 +11,12 @@ import json
 import os
 import re
 import sys
+import threading
+import time
+from collections import deque
 from datetime import date, datetime
 from pathlib import Path
+from urllib.parse import urlencode
 
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE / "engine"))
@@ -348,6 +352,27 @@ def _montar_potencial(res: dict) -> dict | None:
     }
 
 
+# Retângulo que contém Belo Horizonte (com folga). Um link compartilhável
+# com ponto fora daqui é recusado antes de qualquer consulta.
+_BH_LAT = (-20.10, -19.75)
+_BH_LON = (-44.10, -43.80)
+
+# PROTEÇÃO CONTRA SER BLOQUEADO PELA PBH. Toda ficha consulta o CINDACTA ao
+# vivo no servidor da Prefeitura, que tem firewall (já devolveu 403 a
+# acesso sem cabeçalho). Com o link compartilhável, a mesma ficha pode ser
+# aberta muitas vezes — e alguém pode varrer links em série. Duas travas:
+#   1. cache por ponto: o mesmo lote não bate na PBH de novo por 6 horas;
+#   2. freio: no máximo 30 consultas novas por minuto por processo. Passou
+#      disso, a ficha mostra o CINDACTA como "não verificado" (o mesmo
+#      estado de serviço fora do ar) em vez de insistir na Prefeitura.
+_CINDACTA_VALIDADE_S = 6 * 3600
+_CINDACTA_CACHE_MAX = 5000
+_CINDACTA_MAX_POR_MINUTO = 30
+_CINDACTA_CACHE: dict = {}
+_CINDACTA_CHAMADAS: deque = deque()
+_CINDACTA_TRAVA = threading.Lock()
+
+
 def _montar_cindacta(lat: float, lon: float) -> dict:
     """Restrição de altura por proteção aeronáutica (CINDACTA 1), consultada
     ao vivo (ver engine/cindacta.py — não existe camada baixável das
@@ -356,10 +381,30 @@ def _montar_cindacta(lat: float, lon: float) -> dict:
     diverge do que a Informação Básica (IBED) da PBH mostra, é a IBED que
     está desatualizada (o campo mais recente É o registro do CINDACTA)."""
     ponto = gpd.GeoSeries([Point(lon, lat)], crs="EPSG:4326").to_crs(CRS_DADOS).iloc[0]
-    try:
-        r = consultar_altimetria_aero(ponto.x, ponto.y)
-    except CindactaError:
-        return {"disponivel": None}  # serviço fora do ar — não trava a ficha
+    chave = (round(ponto.x), round(ponto.y))  # 1 m: o mesmo link cai na mesma chave
+    agora = time.monotonic()
+    with _CINDACTA_TRAVA:
+        guardado = _CINDACTA_CACHE.get(chave)
+        em_cache = guardado is not None and agora - guardado[0] < _CINDACTA_VALIDADE_S
+        if not em_cache:
+            while _CINDACTA_CHAMADAS and agora - _CINDACTA_CHAMADAS[0] > 60:
+                _CINDACTA_CHAMADAS.popleft()
+            if len(_CINDACTA_CHAMADAS) >= _CINDACTA_MAX_POR_MINUTO:
+                return {"disponivel": None}  # freio: não insiste na PBH
+            _CINDACTA_CHAMADAS.append(agora)
+    if em_cache:
+        r = guardado[1]
+    else:
+        try:
+            r = consultar_altimetria_aero(ponto.x, ponto.y)
+        except CindactaError:
+            return {"disponivel": None}  # serviço fora do ar — não trava a ficha
+        # só guarda resposta de verdade (inclusive "sem restrição"); falha
+        # não entra no cache, pra próxima abertura tentar de novo
+        with _CINDACTA_TRAVA:
+            if len(_CINDACTA_CACHE) >= _CINDACTA_CACHE_MAX:
+                _CINDACTA_CACHE.clear()
+            _CINDACTA_CACHE[chave] = (agora, r)
     if r is None:
         return {"disponivel": False}
     return {
@@ -498,13 +543,39 @@ def consulta_page():
         "data_emissao": date.today().strftime("%d/%m/%Y"),
     }
     if request.method == "GET":
-        return render_template("consulta.html", **contexto)
+        # LINK COMPARTILHÁVEL: a ficha também abre pelo endereço da página
+        # (/consulta?indice=... ou ?lat=..&lon=..), pra ser mandada no
+        # WhatsApp ou favoritada. Endereço por extenso NÃO é aceito aqui de
+        # propósito: cada abertura do link gastaria uma geocodificação no
+        # Mapbox. O link carrega o índice ou o ponto já resolvido.
+        indice_url = (request.args.get("indice") or "").strip()
+        if indice_url:
+            modo, entrada = "indice", {"indice_cadastral": indice_url}
+        elif request.args.get("lat") and request.args.get("lon"):
+            modo, entrada = "ponto", request.args
+        else:
+            return render_template("consulta.html", **contexto)  # formulário vazio
+    else:
+        modo = request.form.get("modo", "endereco")
+        entrada = request.form
+    contexto["modo"] = "endereco" if modo == "ponto" else modo
 
-    modo = request.form.get("modo", "endereco")
-    contexto["modo"] = modo
-
-    if modo == "indice":
-        indice = request.form.get("indice_cadastral", "").strip()
+    if modo == "ponto":
+        try:
+            lat_url = float(entrada.get("lat"))
+            lon_url = float(entrada.get("lon"))
+        except (TypeError, ValueError):
+            contexto["erro"] = "Link inválido: as coordenadas estão mal formadas."
+            return render_template("consulta.html", **contexto)
+        # só aceita ponto dentro de BH — um link fabricado fora da cidade
+        # não pode virar consulta (nem chamada à PBH) à toa
+        if not (_BH_LAT[0] <= lat_url <= _BH_LAT[1] and _BH_LON[0] <= lon_url <= _BH_LON[1]):
+            contexto["erro"] = "Link inválido: o ponto está fora de Belo Horizonte."
+            return render_template("consulta.html", **contexto)
+        g = {"lat": lat_url, "lon": lon_url,
+             "nome_encontrado": "ponto no mapa (link compartilhado)", "tipo": "address"}
+    elif modo == "indice":
+        indice = entrada.get("indice_cadastral", "").strip()
         contexto["indice_cadastral"] = indice
         if not indice:
             contexto["erro"] = "Digite um índice cadastral para consultar."
@@ -515,7 +586,7 @@ def consulta_page():
             contexto["erro"] = str(e)
             return render_template("consulta.html", **contexto)
     else:
-        endereco = request.form.get("endereco", "").strip()
+        endereco = entrada.get("endereco", "").strip()
         contexto["endereco"] = endereco
         if not endereco:
             contexto["erro"] = "Digite um endereço para consultar."
@@ -538,6 +609,13 @@ def consulta_page():
     res = consultar(g["lat"], g["lon"], ZON, ADE, VIA, EXTRAS)
     res["geocodificado_como"] = g["nome_encontrado"]
     contexto["resultado"] = res
+    # o link que reabre ESTA ficha (ver o GET acima). O script troca a barra
+    # do navegador por ele, então copiar a URL já basta pra compartilhar.
+    if modo == "indice":
+        contexto["permalink"] = "/consulta?" + urlencode({"indice": contexto["indice_cadastral"]})
+    else:
+        contexto["permalink"] = "/consulta?" + urlencode(
+            {"lat": f"{g['lat']:.6f}", "lon": f"{g['lon']:.6f}"})
 
     ficha = res.get("ficha", {})
     via_info = res.get("via_mais_proxima") or {}
@@ -831,6 +909,16 @@ def reportar_geral():
         "mensagem": mensagem[:2000],
     })
     return jsonify({"ok": True})
+
+
+@app.route("/robots.txt")
+def robots_txt():
+    """Robôs de busca ficam FORA das fichas por enquanto. Cada ficha consulta
+    o CINDACTA ao vivo na PBH; um rastreador varrendo milhares de links
+    poderia levar a Prefeitura a bloquear o Gabarito. A página inicial
+    continua liberada. Abrir as fichas pro Google é decisão separada (com
+    sitemap pequeno), não efeito colateral do link compartilhável."""
+    return Response("User-agent: *\nDisallow: /consulta\n", mimetype="text/plain")
 
 
 if __name__ == "__main__":
