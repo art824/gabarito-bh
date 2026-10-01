@@ -783,18 +783,19 @@
             </div>
           </div>
 
-          {% if estudo.desenho_inicial %}
-          <div class="estudo-dxf">
-            <a id="baixar-dxf" class="botao botao-mini" href="#" download
-               {% if identificacao and identificacao.indice_cadastral %}data-indice="{{ identificacao.indice_cadastral }}"{% endif %}>Baixar para CAD (.dxf)</a>
-            <span class="mono">contorno do lote, envelope e projeção, em UTM (SIRGAS 2000 / 23S)</span>
-          </div>
-          {% endif %}
-
         </div>
       </div>
       </div>
     </section>
+
+    {% if estudo.desenho_inicial %}
+    <div class="estudo-dxf estudo-dxf-fora">
+      <a id="baixar-dxf" class="botao botao-mini" href="#" download
+         {% if identificacao and identificacao.indice_cadastral %}data-indice="{{ identificacao.indice_cadastral }}"{% endif %}>Baixar para CAD (.dxf)</a>
+      <span class="mono">contorno do lote, envelope e projeção, em UTM (SIRGAS 2000 / 23S)</span>
+    </div>
+    {% endif %}
+
     <script type="application/json" id="dados-estudo">{{ estudo|tojson }}</script>
     {% endif %}
 

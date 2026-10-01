@@ -619,10 +619,12 @@ footer /* assinatura do autor + contato — precisa ficar LEGÍVEL (antes o cont
 
 /* baixar o estudo em DXF (abre no CAD) */
 .estudo-dxf {
-  border: 1.5px solid var(--tinta); border-top: none;
+  border: 1.5px solid var(--tinta);
   background: var(--papel-vivo); padding: 14px;
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
 }
+/* fora do anexo interativo (card próprio, não mais encaixado no painel) */
+.estudo-dxf-fora { margin: 24px 22px; }
 .estudo-dxf .mono {
   font-family: var(--mono); font-size: 10.5px; line-height: 1.4;
   color: var(--grafite); flex: 1 1 190px;
