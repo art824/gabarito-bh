@@ -1059,6 +1059,13 @@ def reportar_geral():
     return jsonify({"ok": True})
 
 
+@app.errorhandler(404)
+def pagina_nao_encontrada(_erro):
+    """404 com a cara do site (antes saía a página padrão do Flask, em inglês).
+    noindex vem do status 404; o mapa do site não lista nada daqui."""
+    return render_template("404.html"), 404
+
+
 @app.route("/robots.txt")
 def robots_txt():
     """Robôs de busca ficam FORA das fichas por enquanto. Cada ficha consulta
@@ -1066,7 +1073,31 @@ def robots_txt():
     poderia levar a Prefeitura a bloquear o Gabarito. A página inicial
     continua liberada. Abrir as fichas pro Google é decisão separada (com
     sitemap pequeno), não efeito colateral do link compartilhável."""
-    return Response("User-agent: *\nDisallow: /consulta\n", mimetype="text/plain")
+    return Response(
+        "User-agent: *\nDisallow: /consulta\n\nSitemap: https://gabaritoarq.com.br/sitemap.xml\n",
+        mimetype="text/plain",
+    )
+
+
+@app.route("/sitemap.xml")
+def sitemap_xml():
+    """Só a página inicial: as fichas ficam fora de propósito (cada uma consulta
+    o CINDACTA ao vivo na PBH — ver /robots.txt)."""
+    return Response(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        "<url><loc>https://gabaritoarq.com.br/</loc></url></urlset>\n",
+        mimetype="application/xml",
+    )
+
+
+@app.route("/favicon.ico")
+def favicon_ico():
+    """O Google e alguns navegadores procuram o ícone neste endereço fixo."""
+    from flask import send_from_directory
+    resp = send_from_directory(app.static_folder, "favicon.ico", mimetype="image/x-icon")
+    resp.headers["Cache-Control"] = "public, max-age=86400"
+    return resp
 
 
 if __name__ == "__main__":

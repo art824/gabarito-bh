@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block titulo %}Página não encontrada — Gabarito{% endblock %}
+{% block descricao %}Esta página não existe. Volte para o Gabarito e consulte os parâmetros urbanísticos de um lote de Belo Horizonte.{% endblock %}
+
+{% block conteudo %}
+<div class="consulta-topo" style="padding-bottom:96px">
+  <div class="container">
+    <p class="mono" style="letter-spacing:.16em; font-size:12px; text-transform:uppercase; margin:0 0 12px">Erro 404</p>
+    <h1>Esta página não existe.</h1>
+    <p>O endereço pode ter mudado ou ter sido digitado errado. Para consultar um lote de Belo Horizonte, volte para a busca.</p>
+    <p style="margin-top:28px">
+      <a class="botao" href="/consulta">Consultar um lote</a>
+      &nbsp;&nbsp;<a href="/">Ir para o início</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
