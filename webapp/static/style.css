@@ -1845,9 +1845,33 @@ input[type="range"]::-moz-range-thumb {
   .celulas { grid-template-columns: repeat(2, 1fr); }
   .cel, .cel-2, .cel-3, .cel-4 { grid-column: span 2; }
   .cel-ca { grid-column: span 1; }
-  .fsec-estudo .estudo-corpo { grid-template-columns: 1fr; }
   .fsec-cab { flex-wrap: wrap; }
   .fsec-cab .fonte { margin-left: 0; width: 100%; }
+
+  /* ---- estudo interativo no celular ----
+     Bug: com `1fr` a trilha da grade NÃO encolhe abaixo do min-content dos
+     filhos. Aqui o filho de maior min-content era o texto "máx. N m — a
+     partir daí os afastamentos consomem o lote" (#est-h-max, que era
+     nowrap): a coluna virava ~437px num celular de ~370px, o desenho e o
+     slider estouravam pra fora da tela (cortados pelo overflow-x do body) e
+     o fim do slider ficava inalcançável. minmax(0,1fr) deixa a trilha
+     encolher, e os filhos ganham min-width:0 pra não reabrirem o problema. */
+  .fsec-estudo .estudo-corpo { grid-template-columns: minmax(0, 1fr); }
+  .estudo-desenho, .estudo-painel { min-width: 0; }
+  .estudo-desenho { padding: 14px 12px; }
+  .estudo-painel { padding: 16px 14px; gap: 16px; }
+  #est-h-max { white-space: normal; }
+  .controle-h-base { flex-direction: column; gap: 4px; }
+  .leg-linha, .leg-nota { min-width: 0; overflow-wrap: anywhere; }
+  .gcel { padding: 10px; min-width: 0; }
+  .gcel b { font-size: 18px; overflow-wrap: anywhere; }
+}
+
+/* dedo é mais grosso que cursor: alça do slider maior e área de toque útil */
+@media (pointer: coarse) {
+  .controle-h input[type="range"] { height: 4px; margin: 12px 0 18px; touch-action: pan-y; }
+  .controle-h input[type="range"]::-webkit-slider-thumb { width: 30px; height: 30px; }
+  .controle-h input[type="range"]::-moz-range-thumb { width: 30px; height: 30px; }
 }
 
 /* atributo hidden SEMPRE vence display de classe (evita legenda fantasma) */
