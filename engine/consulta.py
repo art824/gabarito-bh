@@ -343,6 +343,25 @@ def consultar(lat: float, lon: float, zon, ade, via, extras=None) -> dict:
             for classe in sorted(set(atingidas["CLASSIFICA"].dropna())):
                 r["app"].append({"classificacao": classe})
 
+    # CAMADA AUSENTE NÃO É "NÃO INCIDE". Em 03/11/2026 achamos que o pacote de
+    # dados publicado (dados_producao.zip) não tinha as 3 camadas de proteção
+    # cultural nem a APP: o laço acima pulava em silêncio e a ficha afirmava
+    # "Não" para qualquer lote. Aqui registramos o que realmente foi consultado
+    # para a ficha poder dizer "não verificado" em vez de "Não".
+    camadas_ok = {k: bool(extras) and extras.get(k) is not None
+                  for k in ("prot_iphan", "prot_iepha", "prot_cdpcm", "app")}
+    r["camadas_disponiveis"] = camadas_ok
+    if not all(camadas_ok[k] for k in ("prot_iphan", "prot_iepha", "prot_cdpcm")):
+        r["alertas"].append(
+            "Proteção cultural não verificada — a camada de dados não está disponível "
+            "neste servidor. Confirme no BHMap ou no SIURBE antes de decidir."
+        )
+    if not camadas_ok["app"]:
+        r["alertas"].append(
+            "Área de Preservação Permanente (APP) não verificada — a camada de dados "
+            "não está disponível neste servidor. Confirme no BHMap ou no SIURBE."
+        )
+
     if r["protecao_cultural"]:
         r["alertas"].append(
             "Lote em área de proteção cultural — há diretrizes específicas de "

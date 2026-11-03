@@ -303,12 +303,18 @@
         <span class="fonte mono">IPHAN · IEPHA · CDPCM-BH · APP</span>
       </header>
       <div class="celulas">
-        {% set esferas = [('Federal (IPHAN)', 'Proteção federal'), ('Estadual (IEPHA)', 'Proteção estadual'), ('Municipal (CDPCM-BH)', 'Proteção municipal')] %}
-        {% for chave, rotulo in esferas %}
+        {# camada ausente no servidor NÃO é "Não": mostra "Não verificado" (ver camadas_disponiveis em engine/consulta.py) #}
+        {% set cd = resultado.camadas_disponiveis or {} %}
+        {% set esferas = [('Federal (IPHAN)', 'Proteção federal', 'prot_iphan'), ('Estadual (IEPHA)', 'Proteção estadual', 'prot_iepha'), ('Municipal (CDPCM-BH)', 'Proteção municipal', 'prot_cdpcm')] %}
+        {% for chave, rotulo, camada in esferas %}
         {% set incidentes = resultado.protecao_cultural | selectattr('esfera', 'equalto', chave) | list %}
+        {% set camada_ok = cd.get(camada, true) %}
         <div class="cel cel-2">
           <span class="k">{{ rotulo }}</span>
-          <span class="v">{{ 'Sim' if incidentes else 'Não' }}</span>
+          <span class="v">{% if incidentes %}Sim{% elif camada_ok %}Não{% else %}Não verificado{% endif %}</span>
+          {% if not camada_ok and not incidentes %}
+          <span class="sub">A camada de dados não está disponível neste servidor. Confirme no BHMap ou no SIURBE.</span>
+          {% endif %}
           {% if incidentes %}
           <span class="sub">{% for i in incidentes %}{{ i.nome }}{% if i.tipo and i.tipo not in i.nome %} <i>({{ i.tipo }})</i>{% endif %}{% if not loop.last %}<br>{% endif %}{% endfor %}</span>
           {% endif %}
@@ -317,7 +323,10 @@
 
         <div class="cel cel-full {{ 'cel-aviso' if resultado.app else '' }}">
           <span class="k">Área de Preservação Permanente (APP)</span>
-          <span class="v">{% if resultado.app %}Sim — {{ resultado.app | map(attribute='classificacao') | join(' · ') }}{% else %}Não atingido{% endif %}</span>
+          <span class="v">{% if resultado.app %}Sim — {{ resultado.app | map(attribute='classificacao') | join(' · ') }}{% elif cd.get('app', true) %}Não atingido{% else %}Não verificado{% endif %}</span>
+          {% if not cd.get('app', true) and not resultado.app %}
+          <span class="sub">A camada de dados não está disponível neste servidor. Confirme no BHMap ou no SIURBE.</span>
+          {% endif %}
           {% if resultado.app %}
           <span class="sub">A APP é não edificável: reduz a área aproveitável do lote e exige análise ambiental no licenciamento. O limite exato deve ser conferido em levantamento topográfico.</span>
           {% endif %}
@@ -840,6 +849,23 @@
       </ul>
       <p class="sub">Duas ressalvas honestas: o Plano Diretor está em revisão, então a base legal pode mudar; e a Prefeitura atualiza seus cadastros periodicamente, então pode haver divergência entre a cópia de julho/2026 usada aqui e o cadastro de hoje. Para decisões definitivas, confirme na fonte.</p>
     </div>
+
+    {% if base_legal %}
+    <div class="bloco-base-legal">
+      <h4>Base legal</h4>
+      <p class="sub">{{ base_legal.lei }}. Artigos em que esta ficha se apoia. Texto conferido em <b>{{ base_legal.verificado_em[8:10] }}/{{ base_legal.verificado_em[5:7] }}/{{ base_legal.verificado_em[0:4] }}</b> ({{ base_legal.fonte }}). Os números da ficha vêm do Anexo XII, que é outra tabela.</p>
+      {% for a in base_legal.artigos %}
+      <details class="base-legal-art">
+        <summary>Art. {{ a.artigo }}{% if a.alterado %} (com alteração registrada){% endif %}</summary>
+        <div class="base-legal-texto">
+          {% for l in a.linhas %}<p>{{ l }}</p>{% endfor %}
+          <p class="mono base-legal-rodape">{{ a.local }} · situação no texto consolidado: {{ a.situacao }}</p>
+        </div>
+      </details>
+      {% endfor %}
+      <p class="sub">{{ base_legal.aviso }}{% if base_legal.url_oficial %} Texto oficial: <a href="{{ base_legal.url_oficial }}" target="_blank" rel="noopener">site da Câmara Municipal</a>.{% endif %}</p>
+    </div>
+    {% endif %}
 
     <div class="ficha-rodape">
       <span>Apoio ao estudo preliminar — não substitui um responsável técnico (arquiteto/engenheiro) nem a consulta oficial à Prefeitura de BH</span>

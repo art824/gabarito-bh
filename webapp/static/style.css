@@ -457,6 +457,25 @@ section.faixa { padding: 80px 0; }
 .bloco-fontes li { font-size: 12.5px; color: var(--tinta-2); margin-bottom: 7px; }
 .bloco-fontes .sub { display: block; margin-top: 10px; font-size: 11.5px; color: var(--grafite); }
 
+/* base legal: artigos da lei em que a ficha se apoia (colapsável, igual às fontes) */
+.bloco-base-legal {
+  margin: 0 22px 26px;
+  border: 1px solid var(--linha, #C9C2B0);
+  padding: 18px 22px;
+}
+.bloco-base-legal h4 {
+  margin: 0 0 12px;
+  font-family: var(--mono);
+  font-size: 10px; font-weight: 600; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--grafite);
+}
+.bloco-base-legal .sub { display: block; margin: 0 0 10px; font-size: 11.5px; color: var(--grafite); }
+.base-legal-art { border-top: 1px solid var(--linha, #C9C2B0); padding: 8px 0; }
+.base-legal-art summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--tinta-2); }
+.base-legal-texto { padding: 8px 0 2px; }
+.base-legal-texto p { margin: 0 0 6px; font-size: 12.5px; line-height: 1.55; color: var(--tinta-2); }
+.base-legal-texto .base-legal-rodape { margin-top: 10px; font-size: 10px; color: var(--grafite); }
+
 .ficha-rodape {
   border-top: 2px solid var(--tinta);
   padding: 12px 22px;

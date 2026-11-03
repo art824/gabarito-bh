@@ -1,0 +1,76 @@
+{
+  "lei": "Lei 11.181/2019 (Plano Diretor de Belo Horizonte)",
+  "fonte": "LegisWeb (consolidação não oficial)",
+  "url_oficial": "https://www.cmbh.mg.gov.br/atividade-legislativa/pesquisar-legislacao/lei/11181/2019",
+  "verificado_em": "2026-11-03",
+  "sha256_lei": "1aa831074b0216254eed763dd38af21fef691f555083f19d4735430e6ff329b1",
+  "aviso": "Texto de referência, não substitui o texto oficial. Situação 'vigente' quer dizer que o artigo não foi revogado no texto consolidado.",
+  "artigos": [
+    {
+      "artigo": "158",
+      "local": "TÍTULO VI - DA OCUPAÇÃO DO SOLO · CAPÍTULO I - DISPOSIÇÕES GERAIS",
+      "situacao": "vigente",
+      "alterado": false,
+      "linhas": [
+        "Art. 158 Poderão ser construídas edificações em terrenos que façam parte de parcelamento aprovado.",
+        "§ 1º Os projetos de edificação devem observar os parâmetros urbanísticos previstos nesta lei, em especial aqueles incluídos no Anexo XII desta lei, quais sejam:",
+        "I - afastamento frontal mínimo - AFmin;",
+        "II - afastamento de fundos mínimo - AFUmin;",
+        "III - afastamento lateral mínimo - ALmin;",
+        "IV - altimetria máxima;",
+        "V - altura máxima na divisa - AMD;",
+        "VI - coeficiente de aproveitamento mínimo - CAmin;",
+        "VII - coeficiente de aproveitamento básico - CAbas;",
+        "VIII - coeficiente de aproveitamento máximo - CAmax;",
+        "IX - coeficiente de aproveitamento de centralidade - CAcent;",
+        "X - faixa de acumulação;",
+        "XI - número mínimo de vagas para veículos leves;",
+        "XII - número mínimo de vagas para carga e descarga;",
+        "XIII - número mínimo de vagas para embarque e desembarque;",
+        "XIV - quota de terreno por unidade habitacional - QT;",
+        "XV - VETADO",
+        "XVI - recuo de alinhamento;",
+        "XVII - taxa de permeabilidade vegetada - TP;",
+        "XVIII - taxa de ocupação - TO.",
+        "§ 2º As definições dos parâmetros urbanísticos válidos para cada zoneamento são estabelecidas no Anexo XII desta lei.",
+        "§ 3º As alterações em edificações regulares existentes são condicionadas ao não incremento de suas desconformidades em relação à legislação urbanística vigente."
+      ],
+      "sha256": "a88af4e681488d5ae25b2da05d6c717b2a297163578090bf6241efdfa42169af"
+    },
+    {
+      "artigo": "161",
+      "local": "TÍTULO VI - DA OCUPAÇÃO DO SOLO · CAPÍTULO I - DISPOSIÇÕES GERAIS",
+      "situacao": "vigente",
+      "alterado": false,
+      "linhas": [
+        "Art. 161 O controle da permeabilidade do solo nos terrenos deve ser garantido por meio do atendimento à TP, associado à disponibilização de caixa de captação.",
+        "§ 1º A TP corresponde à porcentagem mínima da área do terreno a ser mantida descoberta, em terreno natural e dotada de vegetação e arborização.",
+        "§ 2º Ainda que coberta, será também considerada para fins de cumprimento da taxa de permeabilidade a área em terreno natural dotada de vegetação e arborização, desde que a razão entre a profundidade e a altura da cobertura não seja superior a 1,0 (um inteiro).",
+        "§ 3º A TP mínima para as diferentes porções territoriais do Município é definida nos anexos II e XII desta lei.",
+        "§ 4º Em edificações condominiais, a TP deve estar situada na área de uso comum dos empreendimentos.",
+        "§ 5º Para a efetivação da TP, não é admitida a utilização de piso intertravado, bem como qualquer outro tipo de pavimentação, mesmo que drenante.",
+        "§ 6º Nas hipóteses em que laudo geotécnico atestar incremento de risco geológico em função do cumprimento da TP, os órgãos municipais responsáveis pelas políticas de planejamento urbano definirão a forma de mitigação ou compensação de impactos e prestação de contrapartida de caráter ambiental.",
+        "§ 7º A área vegetada e arborizada referente à TP deve estar situada, preferencialmente, no afastamento frontal.",
+        "§ 8º A caixa de captação constitui dispositivo complementar à TP, com função de amortecimento da descarga de água pluvial na rede pública de drenagem, bem como de melhoria do funcionamento do sistema de micro e macrodrenagem, sendo objeto de exigência conforme disposto em regulamento.",
+        "§ 9º A instalação da caixa de captação deve garantir que o lançamento de águas pluviais de um terreno edificado na rede pública de drenagem seja equivalente à sua vazão em condições naturais.",
+        "§ 10 São de responsabilidade do proprietário do imóvel a manutenção e a limpeza periódica da caixa de captação, de forma a garantir o cumprimento efetivo de sua função.",
+        "§ 11 A caixa de captação poderá ser utilizada como reservatório para reuso das águas pluviais.",
+        "§ 12 Regulamento poderá dispor sobre dispositivos de controle aptos a substituir a caixa de captação, garantido o atendimento ao objetivo descrito no § 9º deste artigo.",
+        "§ 13 Para terrenos em que estejam implantados postos de abastecimento de combustíveis, a TP será de 10% (dez por cento), sendo que o restante da TP prevista para o zoneamento será atendida por meio da instalação de caixa de captação ou outro mecanismo que o licenciamento ambiental indicar.",
+        "§ 14 Na hipótese de elaboração de planos específicos definidos para Zeis, Aeis e conexões de fundo de vale, a TP exigida para cada lote poderá ser concentrada em parte da porção territorial objeto do plano.",
+        "§ 15 Na hipótese prevista no § 14 deste artigo, a norma derivada do plano específico deve definir a TP a ser exigida nos lotes."
+      ],
+      "sha256": "3d632e4257b84475679b7b50cb0a1e64473d0966e0ddfe089f88f69c01e43bbd"
+    },
+    {
+      "artigo": "115",
+      "local": "TÍTULO IV - DO ZONEAMENTO · CAPÍTULO II - DO ZONEAMENTO · Seção X - Das áreas de Projetos Viários Prioritários",
+      "situacao": "vigente",
+      "alterado": false,
+      "linhas": [
+        "Art. 115 Nos lotes lindeiros às vias incluídas entre as sujeitas a recuo de alinhamento, o afastamento frontal mínimo das edificações terá como referência o limite da faixa de recuo de alinhamento."
+      ],
+      "sha256": "85e854d4a2859d044dcd530744c768f7ee3e2c66279a0d8b871fdff2ef5934f1"
+    }
+  ]
+}

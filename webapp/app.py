@@ -42,6 +42,34 @@ from cindacta import consultar_altimetria_aero, CindactaError
 app = Flask(__name__)
 
 
+def _carregar_base_legal():
+    """Artigos da lei que a ficha cita (data/params/base_legal.json, gerado por
+    scripts/exportar_base_legal.py a partir da base de legislação). É um
+    ENFEITE de transparência: qualquer problema (arquivo ausente, JSON quebrado,
+    formato inesperado) devolve None e a ficha só deixa de mostrar o bloco
+    "Base legal" — nunca derruba a página nem mexe em número algum."""
+    try:
+        with open(BASE / "data" / "params" / "base_legal.json", encoding="utf-8") as f:
+            dados = json.load(f)
+        artigos = dados["artigos"]
+        if not isinstance(artigos, list) or not artigos:
+            return None
+        for a in artigos:
+            if not (str(a["artigo"]) and isinstance(a["linhas"], list)):
+                return None
+        return dados
+    except Exception:
+        return None
+
+
+BASE_LEGAL = _carregar_base_legal()
+
+
+@app.context_processor
+def _injetar_base_legal():
+    return {"base_legal": BASE_LEGAL}
+
+
 @app.context_processor
 def _asset_versioning():
     """Cache-busting simples: anexa a data de modificação do arquivo como
@@ -608,9 +636,14 @@ def _montar_veredito(res: dict, cindacta: dict | None = None) -> dict | None:
         verificado.append(
             f"Ocupação máxima de {to_pct:g}% e permeabilidade mínima de {tp_pct:g}% do terreno."
         )
-    if not res.get("protecao_cultural"):
+    # só afirma "sem proteção/APP" se a camada foi de fato consultada (ver
+    # camadas_disponiveis em engine/consulta.py); sem a camada, o alerta "não
+    # verificada" já entrou em nao_verificado acima.
+    camadas = res.get("camadas_disponiveis", {})
+    cultural_ok = all(camadas.get(k, True) for k in ("prot_iphan", "prot_iepha", "prot_cdpcm"))
+    if cultural_ok and not res.get("protecao_cultural"):
         verificado.append("Sem área de proteção cultural (IPHAN, IEPHA ou CDPCM-BH) incidindo no lote.")
-    if not res.get("app"):
+    if camadas.get("app", True) and not res.get("app"):
         verificado.append("Sem Área de Preservação Permanente (APP) atingindo o lote.")
 
     # CINDACTA: única restrição capaz de zerar a construção (altura ≤ ~3m,
