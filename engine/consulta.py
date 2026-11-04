@@ -51,8 +51,16 @@ ADES_COM_SETOR = {
 }
 
 
+# Camadas pequenas que vão junto com o código (data/camadas_extra/, versionada no
+# Git). Servem de reserva quando o pacote de dados do deploy (dados_producao.zip)
+# não as traz: foi assim que a proteção cultural ficou de fora da produção.
+EXTRA = BASE / "data" / "camadas_extra"
+
+
 def _cache_ou_none(nome_parquet: str):
     caminho = CACHE / nome_parquet
+    if not caminho.exists():
+        caminho = EXTRA / nome_parquet
     if not caminho.exists():
         return None
     if nome_parquet.endswith(".parquet") and nome_parquet != "INDICE_CADASTRAL.parquet":
