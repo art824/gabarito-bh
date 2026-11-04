@@ -13,8 +13,8 @@
   var el = document.getElementById("mapa-lote");
   if (!el) return;
 
-  var LIB_JS = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js";
-  var LIB_CSS = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css";
+  var LIB_JS = "/static/vendor/maplibre-gl.js?v=4.7.1";
+  var LIB_CSS = "/static/vendor/maplibre-gl.css?v=4.7.1";
   var ESTILO = "https://tiles.openfreemap.org/styles/positron";
 
   var lat = parseFloat(el.getAttribute("data-lat"));
@@ -28,7 +28,8 @@
     if (desistiu) return;
     desistiu = true;
     clearTimeout(tempoLimite);
-    el.classList.add("mapa-falhou");
+    // com o desenho imediato (SVG) na tela, o bloco FICA: vira um mapa estático
+    if (!el.querySelector(".mapa-placeholder")) el.classList.add("mapa-falhou");
     if (window.console) console.warn("[mapa] não exibido:", motivo);
   }
 
@@ -75,6 +76,41 @@
     });
   }
 
+  /* Desenho imediato do lote (SVG) assim que os dados chegam, antes de a
+     biblioteca e o fundo carregarem: a pessoa nunca vê um espaço vazio. Sai
+     de cena quando o mapa real estiver pronto. */
+  function placeholder(dados) {
+    var fs = dados.features || [];
+    var caixa = [Infinity, Infinity, -Infinity, -Infinity];
+    fs.forEach(function (f) { estenderCaixa(caixa, f.geometry.coordinates); });
+    if (!isFinite(caixa[0])) return null;
+    var k = Math.cos(lat * Math.PI / 180);
+    var w = (caixa[2] - caixa[0]) * k, h = caixa[3] - caixa[1];
+    var NS = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("class", "mapa-placeholder");
+    svg.setAttribute("viewBox", "0 0 " + (w * 1e5).toFixed(0) + " " + (h * 1e5).toFixed(0));
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    function anel(c) {
+      return "M" + c.map(function (p) {
+        return ((p[0] - caixa[0]) * k * 1e5).toFixed(0) + " " + ((caixa[3] - p[1]) * 1e5).toFixed(0);
+      }).join("L") + "Z";
+    }
+    fs.forEach(function (f) {
+      var g = f.geometry, partes = g.type === "Polygon" ? [g.coordinates] : g.coordinates;
+      var path = document.createElementNS(NS, "path");
+      path.setAttribute("d", partes.map(function (poly) { return poly.map(anel).join(""); }).join(""));
+      var lote = f.properties.papel === "lote";
+      path.setAttribute("fill", lote ? "rgba(176,64,44,.42)" : "none");
+      path.setAttribute("stroke", lote ? "#B0402C" : "#6E6858");
+      path.setAttribute("stroke-width", lote ? "260" : "90");
+      svg.appendChild(path);
+    });
+    el.insertBefore(svg, el.firstChild);
+    el.classList.add("mapa-pronto");
+    return svg;
+  }
+
   function montar(dados) {
     var toque = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
     var map;
@@ -87,11 +123,12 @@
         // crédito próprio na legenda (sempre visível, uma linha): o do MapLibre
         // se abria sozinho e cobria a faixa do mapa no celular
         attributionControl: false,
-        scrollZoom: false,        // a roda do mouse continua rolando a PÁGINA
-        dragRotate: false, pitchWithRotate: false, touchPitch: false,
-        dragPan: !toque,          // no celular, um dedo rola a página; pinça dá zoom
-        cooperativeGestures: false,
-        maxZoom: 19.5, minZoom: 13
+        // mapa QUASE PARADO (pedido do Arthur): nada de arrastar, girar ou pinçar;
+        // só os botões + e − (zoom). A página rola normalmente por cima dele.
+        interactive: true, scrollZoom: false, dragPan: false, dragRotate: false,
+        touchZoomRotate: false, doubleClickZoom: false, boxZoom: false, keyboard: false,
+        touchPitch: false, pitchWithRotate: false,
+        maxZoom: 19.5, minZoom: 15
       });
     } catch (e) { return desistir("WebGL indisponível"); }
 
@@ -147,17 +184,15 @@
       // desenhado. (Esperar o "idle" levava vários segundos no celular.)
       clearTimeout(tempoLimite);
       el.classList.add("mapa-pronto");
-      var leg = document.getElementById("mapa-lote-legenda");
-      if (leg) {
-        leg.hidden = false;
-        if (!lote) leg.querySelectorAll("[data-so-com-lote]").forEach(function (s) { s.hidden = true; });
-      }
+      var ph = el.querySelector(".mapa-placeholder");
+      if (ph) ph.parentNode.removeChild(ph);
     });
   }
 
   carregarCss(LIB_CSS);
   var dadosPromessa = fetch("/consulta/mapa?lat=" + lat.toFixed(6) + "&lon=" + lon.toFixed(6))
-    .then(function (r) { if (!r.ok) throw new Error("rota do mapa: " + r.status); return r.json(); });
+    .then(function (r) { if (!r.ok) throw new Error("rota do mapa: " + r.status); return r.json(); })
+    .then(function (d) { if (!desistiu) placeholder(d); return d; });
 
   carregarJs(LIB_JS, function () {
     if (!window.maplibregl) return desistir("biblioteca não carregou");

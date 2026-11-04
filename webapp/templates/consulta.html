@@ -99,11 +99,7 @@
   <div class="mapa-lote" id="mapa-lote"
        data-lat="{{ '%.6f'|format(resultado.entrada.lat) }}" data-lon="{{ '%.6f'|format(resultado.entrada.lon) }}"
        aria-label="Mapa do lote consultado e dos lotes vizinhos" role="img">
-    <div class="mapa-lote-legenda mono" id="mapa-lote-legenda" hidden>
-      <span data-so-com-lote><i class="mapa-cor-lote"></i>Lote consultado</span>
-      <span data-so-com-lote><i class="mapa-cor-vizinho"></i>Lotes vizinhos (CTM)</span>
-      <span class="mapa-credito">Fundo: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a> · <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a></span>
-    </div>
+    <p class="mapa-nota mono">Contorno: Cadastro Técnico (PBH) · Fundo: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a></p>
   </div>
   <script src="{{ asset('mapa.js') }}" defer></script>
   <article class="ficha">
@@ -725,8 +721,8 @@
           </div>
           {% endif %}
 
-          <details class="painel-grupo painel-altura" open>
-            <summary class="grupo-k">Mudam com a altura pretendida</summary>
+          <div class="painel-grupo painel-altura">
+            <span class="grupo-k">Mudam com a altura pretendida</span>
             <div class="destaques-altura">
               <div class="destaque-h">
                 <span class="k">Afastamento lateral</span>
@@ -737,10 +733,10 @@
                 <b id="est-area-max">—</b> <i class="mono">m²</i>
               </div>
             </div>
-          </details>
+          </div>
 
-          <details class="painel-grupo" open>
-            <summary class="grupo-k">Do lote — não mudam com a altura</summary>
+          <div class="painel-grupo">
+            <span class="grupo-k">Do lote — não mudam com a altura</span>
             <div class="grupo-cel">
               {% if resultado.lote_real and resultado.lote_real.testadas %}
               <div class="gcel"><span class="k">Testada</span><b>{{ '%g'|format(resultado.lote_real.testadas[0].comprimento_m) }}</b><i class="mono">m</i></div>
@@ -753,13 +749,12 @@
               <div class="gcel"><span class="k">Unidades máx. (quota)</span><b id="estudo-un">—</b></div>
               <div class="gcel"><span class="k">Permeável mín. (TP)</span><b id="estudo-tp">—</b><i class="mono">m²</i></div>
             </div>
-          </details>
+          </div>
 
           {% if existente %}
           {% macro br(v) %}{{ ('%g'|format(v))|replace('.', ',') }}{% endmacro %}
-          {# começa fechado: é o bloco mais longo e o que deixava o painel com scroll demais #}
-          <details class="painel-grupo painel-existente">
-            <summary class="grupo-k">O que já existe no lote</summary>
+                    <div class="painel-grupo painel-existente">
+            <span class="grupo-k">O que já existe no lote</span>
             <div class="grupo-cel">
               {% if existente.voo %}
               <div class="gcel"><span class="k">Projeção construída <em>· voo 2015</em></span><b>{{ br(existente.voo.projecao_m2) }}</b><i class="mono">m²</i>
@@ -816,7 +811,7 @@
                 <li><b>Desenho</b> — contornos arredondados a 10 cm e recortados na divisa do lote.</li>
               </ul>
             {% endcall %}
-          </details>
+          </div>
           {% endif %}
 
         </div>
@@ -854,18 +849,18 @@
     {% endif %}
 
     {% if resultado.alertas %}
-    <div class="bloco-alertas">
-      <h4>O que esta ficha não verifica</h4>
+    <details class="bloco-alertas bloco-recolhivel">
+      <summary><h4>O que esta ficha não verifica <span class="bloco-qtd">({{ resultado.alertas|length }})</span></h4></summary>
       <ul>
         {% for a in resultado.alertas %}
         <li>{{ a }}</li>
         {% endfor %}
       </ul>
-    </div>
+    </details>
     {% endif %}
 
-    <div class="bloco-fontes">
-      <h4>Fontes dos dados</h4>
+    <details class="bloco-fontes bloco-recolhivel">
+      <summary><h4>Fontes dos dados</h4></summary>
       <ul>
         <li><b>Prefeitura de Belo Horizonte</b> — mapas oficiais de zoneamento, ADEs e seus setores, classificação viária, taxa de permeabilidade, conexão verde, conexão de fundo de vale, centralidade local, recuo de alinhamento, projeto viário prioritário, bairros, proteção cultural e APP. Públicos no BHMap (bhmap.pbh.gov.br); a cópia usada aqui é de <b>julho/2026</b>.</li>
         <li><b>Cadastro Técnico Municipal</b> — o desenho oficial de cada lote e sua área.</li>
@@ -876,11 +871,11 @@
         <li><b>Mapbox</b> — só converte o endereço digitado em coordenada. O lote em si é sempre confirmado no cadastro da Prefeitura, nunca no Mapbox.</li>
       </ul>
       <p class="sub">Duas ressalvas honestas: o Plano Diretor está em revisão, então a base legal pode mudar; e a Prefeitura atualiza seus cadastros periodicamente, então pode haver divergência entre a cópia de julho/2026 usada aqui e o cadastro de hoje. Para decisões definitivas, confirme na fonte.</p>
-    </div>
+    </details>
 
     {% if base_legal %}
-    <div class="bloco-base-legal">
-      <h4>Base legal</h4>
+    <details class="bloco-base-legal bloco-recolhivel">
+      <summary><h4>Base legal</h4></summary>
       <p class="sub">{{ base_legal.lei }}. Artigos em que esta ficha se apoia. Texto conferido em <b>{{ base_legal.verificado_em[8:10] }}/{{ base_legal.verificado_em[5:7] }}/{{ base_legal.verificado_em[0:4] }}</b> ({{ base_legal.fonte }}). Os números da ficha vêm do Anexo XII, que é outra tabela.</p>
       {% for a in base_legal.artigos %}
       <details class="base-legal-art">
@@ -888,7 +883,7 @@
         <div class="base-legal-texto">
           {% for l in a.linhas %}<p>{{ l }}</p>{% endfor %}
           <p class="mono base-legal-rodape">{{ a.local }} · situação no texto consolidado: {{ a.situacao }}</p>
-        </div>
+        </details>
       </details>
       {% endfor %}
       <p class="sub">{{ base_legal.aviso }}{% if base_legal.url_oficial %} Texto oficial: <a href="{{ base_legal.url_oficial }}" target="_blank" rel="noopener">site da Câmara Municipal</a>.{% endif %}</p>

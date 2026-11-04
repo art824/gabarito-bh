@@ -240,21 +240,17 @@ section.faixa { padding: 80px 0; }
 }
 .mapa-lote.mapa-pronto { opacity: 1; }
 .mapa-lote.mapa-falhou { display: none; }
-.mapa-lote .maplibregl-canvas { outline: none; }
-.mapa-lote-legenda {
-  position: absolute; z-index: 2;
-  left: max(16px, calc(50vw - 560px));
-  bottom: 122px;
-  display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
-  font-size: 10px; letter-spacing: .06em; color: var(--tinta-2);
-  background: rgba(251, 248, 240, .85); padding: 4px 10px;
-  pointer-events: none;
+.mapa-placeholder { position: absolute; inset: 0; width: 100%; height: 100%; padding: 90px 40px 110px; box-sizing: border-box; }
+/* nota única, pequena, no pé do mapa (substitui a legenda) */
+.mapa-nota {
+  position: absolute; z-index: 2; left: max(16px, calc(50vw - 560px)); bottom: 112px;
+  font-size: 9.5px; letter-spacing: .05em; color: var(--grafite); margin: 0; pointer-events: auto;
 }
-.mapa-lote-legenda span { display: inline-flex; align-items: center; gap: 6px; }
-.mapa-lote-legenda span[hidden] { display: none; }
+.mapa-nota a { color: var(--grafite); text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 640px) { .mapa-nota { bottom: 96px; left: 14px; right: 14px; font-size: 9px; line-height: 1.4; } }
+.mapa-lote .maplibregl-canvas { outline: none; }
 .mapa-credito { color: var(--grafite); pointer-events: auto; }
 .mapa-credito a { color: var(--grafite); text-decoration: underline; text-underline-offset: 2px; }
-.mapa-lote-legenda i { display: inline-block; width: 12px; height: 9px; }
 .mapa-cor-lote { background: rgba(176, 64, 44, .55); border: 1.5px solid var(--terra); }
 .mapa-cor-vizinho { background: transparent; border: 1px solid #6E6858; }
 /* a atribuição (obrigatória) fica visível, mas discreta, dentro da faixa sem máscara */
@@ -264,7 +260,6 @@ section.faixa { padding: 80px 0; }
 .consulta-topo .caixa-busca, .consulta-topo .dica { position: relative; z-index: 1; }
 @media (max-width: 640px) {
   .mapa-lote { height: 320px; margin-top: -40px; margin-bottom: -90px; }
-  .mapa-lote-legenda { bottom: 100px; gap: 10px; }
   .mapa-lote .maplibregl-ctrl-bottom-right { bottom: 98px; }
   .mapa-lote .maplibregl-ctrl-top-right { top: 56px; }
 }
@@ -1730,3 +1725,14 @@ summary.grupo-k:focus-visible { outline: 2px solid var(--terra); outline-offset:
 .existente-projetos li:last-child { border-bottom: none; }
 .existente-projetos .mono { font-family: var(--mono); font-size: 10.5px; color: var(--grafite); }
 .existente-projetos a { color: var(--terra); }
+
+
+/* blocos do fim da ficha recolhíveis (texto longo): o título é o botão */
+.bloco-recolhivel > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px; }
+.bloco-recolhivel > summary::-webkit-details-marker { display: none; }
+.bloco-recolhivel > summary h4 { margin: 0; flex: 1; }
+.bloco-recolhivel > summary::after { content: "+"; font-family: var(--mono); font-size: 18px; color: var(--grafite); }
+.bloco-recolhivel[open] > summary::after { content: "−"; }
+.bloco-recolhivel[open] > summary { margin-bottom: 12px; }
+.bloco-recolhivel .bloco-qtd { font-weight: 400; color: var(--grafite); }
+.bloco-recolhivel > summary:focus-visible { outline: 2px solid var(--terra); outline-offset: 3px; }
