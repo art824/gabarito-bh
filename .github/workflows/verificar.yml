@@ -1,0 +1,50 @@
+name: Verificar
+
+# Checagens que NÃO dependem dos dados pesados (data/geo não está no repositório).
+# A bateria de regressão dos lotes (tests/regressao_lotes.py) precisa dos dados e
+# continua sendo rodada à mão antes de publicar mudança no motor.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar dependências
+        run: pip install -r requirements.txt pip-audit
+      - name: Código compila
+        run: python -m compileall -q engine webapp scripts tests
+      - name: Templates têm sintaxe válida
+        run: |
+          python - <<'PY'
+          import os
+          from jinja2 import Environment, FileSystemLoader
+          env = Environment(loader=FileSystemLoader("webapp/templates"))
+          for nome in sorted(os.listdir("webapp/templates")):
+              env.get_template(nome)
+              print("ok", nome)
+          PY
+      - name: JSONs de parâmetros são válidos
+        run: |
+          python - <<'PY'
+          import json, glob
+          for f in glob.glob("data/params/*.json"):
+              json.load(open(f, encoding="utf-8")); print("ok", f)
+          PY
+      - name: Nada que não deve estar no repositório público
+        run: |
+          if git ls-files | grep -E '(^|/)\.env$|dados_producao.*\.zip$|^data/geo/'; then
+            echo "Arquivo que não pode ser versionado encontrado"; exit 1
+          fi
+          if git grep -nIiE '(pk|sk)\.[A-Za-z0-9_-]{30,}|ghp_[A-Za-z0-9]{30,}|BEGIN (RSA|OPENSSH|PRIVATE) KEY' -- . ':!.github'; then
+            echo "Possível segredo no código"; exit 1
+          fi
+      - name: Vulnerabilidades conhecidas nas dependências
+        run: pip-audit -r requirements.txt

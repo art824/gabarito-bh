@@ -14,7 +14,7 @@ import sys
 import threading
 import time
 from collections import deque
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -40,6 +40,9 @@ from db_lotes import (
 from cindacta import consultar_altimetria_aero, CindactaError
 
 app = Flask(__name__)
+
+import mimetypes
+mimetypes.add_type("font/woff2", ".woff2")  # senão o Flask serve como octet-stream
 
 
 def _carregar_base_legal():
@@ -70,6 +73,83 @@ def _injetar_base_legal():
     return {"base_legal": BASE_LEGAL}
 
 
+# ---------------------------------------------------------------------------
+# Proteções básicas (auditoria de 04/11/2026)
+# ---------------------------------------------------------------------------
+# Nenhum pedido legítimo (formulário, slider, relato) passa de alguns KB; um
+# corpo grande só serve pra encher memória e log. 413 em vez de aceitar.
+app.config["MAX_CONTENT_LENGTH"] = 64 * 1024
+
+
+@app.errorhandler(413)
+def corpo_grande_demais(_erro):
+    return jsonify({"ok": False, "erro": "Mensagem grande demais."}), 413
+
+
+@app.after_request
+def _cabecalhos(resp):
+    """Cabeçalhos de segurança + cache dos arquivos estáticos.
+
+    CSP completo ficou de fora de propósito: a página usa scripts inline e o
+    Google Analytics, e uma política errada deixaria o site em branco."""
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    resp.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)")
+    resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+    if request.path.startswith("/static/") and resp.status_code == 200:
+        # style.css/script.js vêm com ?v=<data do arquivo> (ver _asset_versioning):
+        # a URL muda quando o arquivo muda, então pode ficar um ano no cache.
+        if "v" in request.args:
+            resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        else:
+            resp.headers["Cache-Control"] = "public, max-age=86400"
+    return resp
+
+
+# Limite simples por visitante (em memória, por processo) pros formulários de
+# relato: sem isto qualquer um enche o log e a caixa de e-mail.
+_LIMITES: dict = {}
+
+
+def _ip_cliente() -> str:
+    return (request.headers.get("CF-Connecting-IP")
+            or (request.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
+            or request.remote_addr or "?")
+
+
+def _excedeu_limite(chave: str, maximo: int, janela_s: int) -> bool:
+    agora = time.time()
+    fila = _LIMITES.setdefault((chave, _ip_cliente()), deque())
+    while fila and agora - fila[0] > janela_s:
+        fila.popleft()
+    if len(fila) >= maximo:
+        return True
+    fila.append(agora)
+    if len(_LIMITES) > 5000:  # poda: descarta quem não pediu nada na janela
+        for k in [k for k, v in _LIMITES.items() if not v or agora - v[-1] > janela_s]:
+            _LIMITES.pop(k, None)
+    return False
+
+
+def _ponto_em_bh(lat, lon) -> bool:
+    """lat/lon finitos e dentro do retângulo que contém Belo Horizonte."""
+    try:
+        lat, lon = float(lat), float(lon)
+    except (TypeError, ValueError):
+        return False
+    return (lat == lat and lon == lon  # exclui nan
+            and _BH_LAT[0] <= lat <= _BH_LAT[1] and _BH_LON[0] <= lon <= _BH_LON[1])
+
+
+def _altura_valida(altura) -> bool:
+    try:
+        altura = float(altura)
+    except (TypeError, ValueError):
+        return False
+    return altura == altura and 0 < altura <= 300
+
+
 @app.context_processor
 def _asset_versioning():
     """Cache-busting simples: anexa a data de modificação do arquivo como
@@ -87,6 +167,27 @@ def _asset_versioning():
 print("Carregando camadas geoespaciais (pode levar alguns segundos)...")
 ZON, ADE, VIA, EXTRAS = carregar_camadas()
 print("Camadas carregadas. Servidor pronto.")
+
+
+def _status_dados() -> dict:
+    """Quais camadas de dados este servidor tem (usado em /saude e no log de
+    inicialização). Camada ausente = ficha 'não verificado', nunca erro."""
+    camadas = {"zoneamento": ZON is not None and len(ZON) > 0,
+               "ade": ADE is not None and len(ADE) > 0,
+               "vias": VIA is not None and len(VIA) > 0}
+    for chave, valor in EXTRAS.items():
+        camadas[chave] = valor is not None
+    ausentes = sorted(k for k, ok in camadas.items() if not ok)
+    essenciais = ("zoneamento", "ade", "vias", "lote_ctm", "indice_cadastral")
+    return {"ok": all(camadas.get(k) for k in essenciais), "ausentes": ausentes, "camadas": camadas}
+
+
+_ST = _status_dados()
+if _ST["ausentes"]:
+    print(f"[SAÚDE][AVISO] camadas ausentes neste servidor: {', '.join(_ST['ausentes'])} "
+          "(as fichas mostram 'não verificado' para o que depende delas)", flush=True)
+else:
+    print("[SAÚDE] todas as camadas de dados carregadas.", flush=True)
 
 # Rótulos legíveis para as chaves cruas do banco de CA (tabela 10, Anexo XII)
 ROTULOS_CA = {
@@ -948,6 +1049,8 @@ def consulta_estudo():
         altura = float(dados.get("altura"))
     except (TypeError, ValueError):
         return jsonify({"erro": "parâmetros inválidos"}), 400
+    if not _ponto_em_bh(lat, lon) or not _altura_valida(altura):
+        return jsonify({"erro": "parâmetros fora do intervalo aceito"}), 400
 
     # o front manda de volta a altura_maxima que já recebeu na carga
     # inicial — evita recalcular a varredura sequencial (mais cara) a
@@ -982,6 +1085,8 @@ def consulta_dxf():
         altura = float(request.args.get("altura", 9))
     except (TypeError, ValueError):
         altura = 9.0
+    if not _ponto_em_bh(lat, lon) or not _altura_valida(altura):
+        return "parâmetros fora do intervalo aceito", 400
 
     desenho = _calcular_desenho(lat, lon, altura, com_existente=True)
     if desenho is None:
@@ -1061,14 +1166,26 @@ def _entregar_relato(registro: dict) -> None:
 @app.route("/reportar-desenho", methods=["POST"])
 def reportar_desenho():
     """Relato de 'o desenho não bate', vindo do estudo interativo."""
+    if _excedeu_limite("relato", 5, 600):
+        return jsonify({"ok": False, "erro": "Muitos envios seguidos. Tente de novo em alguns minutos."}), 429
     dados = request.get_json(silent=True) or {}
+    if not isinstance(dados, dict):
+        dados = {}
+
+    def _num(v):
+        try:
+            v = float(v)
+            return v if v == v and abs(v) < 1000 else None
+        except (TypeError, ValueError):
+            return None
+
     _entregar_relato({
         "origem": "desenho do lote",
-        "timestamp": datetime.utcnow().isoformat() + "Z",
-        "lat": dados.get("lat"), "lon": dados.get("lon"),
-        "endereco": dados.get("endereco"),
-        "tipo": dados.get("tipo"),
-        "comentario": (dados.get("comentario") or "").strip()[:2000],
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "lat": _num(dados.get("lat")), "lon": _num(dados.get("lon")),
+        "endereco": str(dados.get("endereco") or "")[:300],
+        "tipo": str(dados.get("tipo") or "")[:60],
+        "comentario": str(dados.get("comentario") or "").strip()[:2000],
     })
     return jsonify({"ok": True})
 
@@ -1078,18 +1195,36 @@ def reportar_geral():
     """Feedback geral (botão do rodapé, em qualquer página). Substitui o
     mailto: — que no Windows abria um diálogo de 'escolha um app de e-mail'
     e, sem cliente configurado, simplesmente não funcionava."""
+    if _excedeu_limite("relato", 5, 600):
+        return jsonify({"ok": False, "erro": "Muitos envios seguidos. Tente de novo em alguns minutos."}), 429
     dados = request.get_json(silent=True) or {}
-    mensagem = (dados.get("mensagem") or "").strip()
+    if not isinstance(dados, dict):
+        dados = {}
+    mensagem = str(dados.get("mensagem") or "").strip()
     if not mensagem:
         return jsonify({"ok": False, "erro": "Escreva o que aconteceu antes de enviar."}), 400
     _entregar_relato({
         "origem": "feedback do rodapé",
-        "timestamp": datetime.utcnow().isoformat() + "Z",
-        "pagina": (dados.get("pagina") or "")[:300],
-        "contato": (dados.get("contato") or "").strip()[:200],
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "pagina": str(dados.get("pagina") or "")[:300],
+        "contato": str(dados.get("contato") or "").strip()[:200],
         "mensagem": mensagem[:2000],
     })
     return jsonify({"ok": True})
+
+
+@app.route("/privacidade", methods=["GET"])
+def privacidade():
+    return render_template("privacidade.html")
+
+
+@app.route("/saude", methods=["GET"])
+def saude():
+    """Checagem de saúde: diz quais camadas de dados este servidor realmente
+    carregou. Existe porque em 03/11/2026 a produção rodou semanas sem as
+    camadas de proteção cultural e ninguém percebeu (o código pulava a
+    camada ausente em silêncio). 200 = pode atender; 'ausentes' = degradado."""
+    return jsonify(_status_dados())
 
 
 @app.errorhandler(404)

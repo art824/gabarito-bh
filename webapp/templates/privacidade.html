@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block titulo %}Privacidade — Gabarito{% endblock %}
+{% block descricao %}Como o Gabarito trata dados: o que é coletado, para quê, com quem é compartilhado e como pedir a exclusão.{% endblock %}
+
+{% block conteudo %}
+<div class="consulta-topo" style="padding-bottom:72px">
+  <div class="container" style="max-width:760px">
+    <p class="mono" style="letter-spacing:.16em; font-size:12px; text-transform:uppercase; margin:0 0 12px">Privacidade</p>
+    <h1>Como o Gabarito trata os seus dados</h1>
+    <p>O Gabarito é grátis, não tem cadastro nem login. Esta página explica, em linguagem simples, o pouco que é coletado.</p>
+
+    <h3>Quem responde por este site</h3>
+    <p>Arthur Cunha Ferreira, graduando em Arquitetura e Urbanismo pela UFMG. Contato e pedidos sobre dados: <b>arthurcunhaf@gmail.com</b>.</p>
+
+    <h3>O que é coletado</h3>
+    <ul>
+      <li><b>O endereço que você digita.</b> Ele é enviado ao serviço de mapas Mapbox só para virar uma coordenada. Nós não guardamos o endereço em um banco de dados.</li>
+      <li><b>Estatísticas de uso.</b> Usamos o Google Analytics para saber quantas pessoas usam o site, de que cidade (aproximada), em que tipo de aparelho e quanto tempo ficam. Isso usa cookies de análise e não identifica você pelo nome.</li>
+      <li><b>Relatos de erro.</b> Se você usar o botão "Reportar um erro", guardamos o texto que escrever e o contato, se quiser informá-lo. Usamos só para corrigir o problema e, se você pediu, responder.</li>
+      <li><b>Registros técnicos da hospedagem.</b> Os serviços que mantêm o site no ar (Render e Cloudflare) registram acessos, incluindo o endereço de internet (IP) e a página acessada. Isso é padrão de qualquer site e fica sob controle deles.</li>
+    </ul>
+
+    <h3>O que não fazemos</h3>
+    <ul>
+      <li>Não vendemos dados e não fazemos publicidade.</li>
+      <li>Não pedimos nome, CPF, telefone nem documentos para consultar um lote.</li>
+    </ul>
+
+    <h3>Com quem os dados passam</h3>
+    <p>Google (estatísticas), Mapbox (conversão de endereço em coordenada), Render e Cloudflare (hospedagem). Os dados do lote vêm de bases públicas da Prefeitura de Belo Horizonte e não são dados pessoais seus.</p>
+
+    <h3>Seus direitos</h3>
+    <p>Você pode pedir acesso, correção ou exclusão dos dados que tenhamos sobre você (por exemplo, um relato com o seu contato) escrevendo para o e-mail acima. Para não ser contado nas estatísticas, você pode bloquear cookies de análise no seu navegador.</p>
+
+    <p class="sub" style="margin-top:28px">Última atualização: 04/11/2026. Se algo mudar, esta página muda junto.</p>
+    <p style="margin-top:20px"><a class="botao" href="/">Voltar ao início</a></p>
+  </div>
+</div>
+{% endblock %}
