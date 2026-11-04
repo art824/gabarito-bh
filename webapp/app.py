@@ -142,6 +142,40 @@ def _ponto_em_bh(lat, lon) -> bool:
             and _BH_LAT[0] <= lat <= _BH_LAT[1] and _BH_LON[0] <= lon <= _BH_LON[1])
 
 
+# --- Teto por visitante nas rotas pesadas ------------------------------------------
+# Folgado de propósito: uso normal não chega perto (o slider de altura faz ~7
+# pedidos/s só enquanto é arrastado). Serve para barrar UM aparelho que martela o
+# servidor (robô, script), sem incomodar quem usa. NÃO há fila de simultâneas: em
+# 04/11/2026 testei uma fila de 2 vagas (rajada de 8 fichas) e ela NÃO baixou o
+# pico de memória (500 x 493 MB) e ainda devolveu 503 a 3 de 8 pessoas. O que sobe a
+# memória é o acúmulo de fichas calculadas, não a simultaneidade (ver CLAUDE.md).
+_TETO_POR_MIN = {"/consulta": 60, "/consulta/estudo": 300, "/consulta/dxf": 30}
+
+
+def _e_pedido_pesado() -> bool:
+    if request.path in ("/consulta/estudo", "/consulta/dxf"):
+        return True
+    if request.path == "/consulta":
+        # formulário vazio é barato; só conta quando há conta de verdade a fazer
+        return request.method == "POST" or bool(request.args.get("indice") or
+                                                (request.args.get("lat") and request.args.get("lon")))
+    return False
+
+
+@app.before_request
+def _porteiro():
+    if _e_pedido_pesado() and _excedeu_limite("pesada:" + request.path, _TETO_POR_MIN[request.path], 60):
+        resp = jsonify({"ok": False, "erro": "Muitos pedidos seguidos do mesmo aparelho. Espere um minuto e tente de novo."})             if request.path != "/consulta" else Response(
+                "<!DOCTYPE html><html lang='pt-BR'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+                "<title>Gabarito</title><body style='font-family:sans-serif;max-width:520px;margin:15vh auto;padding:0 20px'>"
+                "<h2>Muitos pedidos seguidos do mesmo aparelho.</h2><p>Espere um minuto e tente de novo.</p>"
+                "<p><a href='/consulta'>Nova consulta</a></p></body></html>", mimetype="text/html")
+        resp.status_code = 429
+        resp.headers["Retry-After"] = "60"
+        return resp
+    return None
+
+
 def _altura_valida(altura) -> bool:
     try:
         altura = float(altura)
