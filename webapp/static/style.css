@@ -207,6 +207,68 @@ section.faixa { padding: 80px 0; }
   letter-spacing: -0.015em; margin: 0 0 8px;
 }
 .consulta-topo > .container > p { color: var(--tinta-2); font-size: 15px; margin: 0 0 28px; }
+/* com ficha na tela o título sai (Fase 0) e a busca sobe */
+.consulta-topo.com-ficha { padding-top: 26px; }
+.so-leitor {
+  position: absolute !important; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; margin: -1px; padding: 0; border: 0;
+}
+
+/* ---------- Mapa do lote (Fase 1) ----------
+   Sem borda: ocupa a largura da janela, desvanece nas quatro bordas e
+   "sangra" por trás da busca (em cima) e do começo da ficha (embaixo).
+   A busca e a ficha ficam por cima (z-index) e recebem os cliques. */
+.mapa-lote {
+  position: relative; z-index: 0;
+  height: 380px;
+  margin: -70px calc(50% - 50vw) -110px;
+  background: var(--papel);
+  opacity: 0; transition: opacity .5s ease;
+}
+/* O desvanecimento é uma película da cor do papel POR CIMA do mapa, e não
+   mask-image sobre o canvas WebGL: em 04/11/2026 a versão com máscara
+   apareceu em branco no preview (não confirmei se era a máscara ou a captura
+   cedo demais). A película é o caminho que funciona em qualquer navegador.
+   Em cima e embaixo ela fica quase toda escondida atrás da busca e da ficha. */
+.mapa-lote::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background:
+    linear-gradient(to bottom, var(--papel) 0, rgba(242,237,224,0) 24%),
+    linear-gradient(to top, var(--papel) 0, rgba(242,237,224,0) 36%),
+    linear-gradient(to right, var(--papel) 0, rgba(242,237,224,0) 16%),
+    linear-gradient(to left, var(--papel) 0, rgba(242,237,224,0) 16%);
+}
+.mapa-lote.mapa-pronto { opacity: 1; }
+.mapa-lote.mapa-falhou { display: none; }
+.mapa-lote .maplibregl-canvas { outline: none; }
+.mapa-lote-legenda {
+  position: absolute; z-index: 2;
+  left: max(16px, calc(50vw - 560px));
+  bottom: 122px;
+  display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+  font-size: 10px; letter-spacing: .06em; color: var(--tinta-2);
+  background: rgba(251, 248, 240, .85); padding: 4px 10px;
+  pointer-events: none;
+}
+.mapa-lote-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.mapa-lote-legenda span[hidden] { display: none; }
+.mapa-credito { color: var(--grafite); pointer-events: auto; }
+.mapa-credito a { color: var(--grafite); text-decoration: underline; text-underline-offset: 2px; }
+.mapa-lote-legenda i { display: inline-block; width: 12px; height: 9px; }
+.mapa-cor-lote { background: rgba(176, 64, 44, .55); border: 1.5px solid var(--terra); }
+.mapa-cor-vizinho { background: transparent; border: 1px solid #6E6858; }
+/* a atribuição (obrigatória) fica visível, mas discreta, dentro da faixa sem máscara */
+.mapa-lote .maplibregl-ctrl-bottom-right { bottom: 120px; right: max(16px, calc(50vw - 560px)); }
+.mapa-lote .maplibregl-ctrl-top-right { top: 84px; right: max(16px, calc(50vw - 560px)); }
+.consulta-topo .ficha { position: relative; z-index: 1; }
+.consulta-topo .caixa-busca, .consulta-topo .dica { position: relative; z-index: 1; }
+@media (max-width: 640px) {
+  .mapa-lote { height: 320px; margin-top: -40px; margin-bottom: -90px; }
+  .mapa-lote-legenda { bottom: 100px; gap: 10px; }
+  .mapa-lote .maplibregl-ctrl-bottom-right { bottom: 98px; }
+  .mapa-lote .maplibregl-ctrl-top-right { top: 56px; }
+}
+@media print { .mapa-lote { display: none !important; } }
 
 .modos { display: flex; margin-bottom: -2px; position: relative; z-index: 2; }
 .modo {
@@ -874,7 +936,7 @@ input[type="range"]::-moz-range-thumb {
   .erro, .skeleton-ficha, .modal-fundo, .botao-cel,
   .report-btn, .reportar-popover, .info-btn, .info-popover,
   .estudo-desenho, .controle-h, .destaques-altura, .estudo-veu, .estudo-dxf,
-  .fsec-estudo .estudo-painel .painel-grupo:last-of-type,
+  .estudo-col-esq, .painel-altura,
   input[type="range"] {
     display: none !important;
   }
@@ -1340,6 +1402,25 @@ input[type="range"]::-moz-range-thumb {
 }
 .painel-grupo .grupo-k::after { content: ""; flex: 1; height: 1px; background: var(--linha); }
 .painel-grupo .grupo-k em { font-style: normal; text-transform: none; letter-spacing: 0; font-weight: 400; }
+/* grupos recolhíveis (Fase 0): o título é o botão; a seta gira quando aberto */
+summary.grupo-k { cursor: pointer; list-style: none; padding: 4px 0; }
+summary.grupo-k::-webkit-details-marker { display: none; }
+summary.grupo-k::before {
+  content: ""; flex: none; width: 0; height: 0;
+  border-style: solid; border-width: 4px 0 4px 6px;
+  border-color: transparent transparent transparent var(--grafite);
+  transition: transform .15s;
+}
+details.painel-grupo[open] > summary.grupo-k::before { transform: rotate(90deg); }
+summary.grupo-k:hover { color: var(--tinta); }
+summary.grupo-k:focus-visible { outline: 2px solid var(--terra); outline-offset: 2px; }
+.painel-altura .destaques-altura { border-top: 1.5px solid var(--tinta); }
+
+/* coluna da esquerda do estudo: desenho + controle de altura logo abaixo */
+.estudo-col-esq { background: var(--papel-vivo); display: flex; flex-direction: column; min-width: 0; }
+.estudo-col-esq .controle-h { margin: 0 20px 20px; }
+/* a coluna ficou mais estreita que o painel antigo: o texto do teto quebra linha */
+.estudo-col-esq #est-h-max { white-space: normal; }
 
 .grupo-cel {
   display: grid; grid-template-columns: repeat(2, 1fr);
@@ -1419,6 +1500,7 @@ input[type="range"]::-moz-range-thumb {
   .fsec-estudo .estudo-corpo { grid-template-columns: minmax(0, 1fr); }
   .estudo-desenho, .estudo-painel { min-width: 0; }
   .estudo-desenho { padding: 14px 12px; }
+  .estudo-col-esq .controle-h { margin: 0 12px 14px; }
   .estudo-painel { padding: 16px 14px; gap: 16px; }
   #est-h-max { white-space: normal; }
   .controle-h-base { flex-direction: column; gap: 4px; }

@@ -33,9 +33,15 @@
 
 {% block conteudo %}
 
-<div class="container consulta-topo">
+<div class="container consulta-topo {{ 'com-ficha' if resultado else '' }}">
+  {# Fase 0 do plano: com ficha na tela, o título sai e o espaço vira o mapa.
+     Na página vazia ele fica (é o h1 da página). #}
+  {% if resultado %}
+  <h1 class="so-leitor">Ficha urbanística do lote</h1>
+  {% else %}
   <h1>Consultar lote</h1>
   <p>Ficha urbanística pela Lei 11.181/19 — Plano Diretor de Belo Horizonte.</p>
+  {% endif %}
 
   <div class="modos" id="modos-busca">
     <button type="button" class="modo {{ 'ativo' if modo != 'indice' else '' }}" data-modo="endereco">Endereço</button>
@@ -88,6 +94,18 @@
 
   {% if resultado %}
   {% set ns = namespace(sec=0) %}
+  {# Fase 1: mapa do lote e dos vizinhos. Começa vazio e o script preenche
+     (rota /consulta/mapa). Se o mapa falhar, ele some e a ficha não muda. #}
+  <div class="mapa-lote" id="mapa-lote"
+       data-lat="{{ '%.6f'|format(resultado.entrada.lat) }}" data-lon="{{ '%.6f'|format(resultado.entrada.lon) }}"
+       aria-label="Mapa do lote consultado e dos lotes vizinhos" role="img">
+    <div class="mapa-lote-legenda mono" id="mapa-lote-legenda" hidden>
+      <span data-so-com-lote><i class="mapa-cor-lote"></i>Lote consultado</span>
+      <span data-so-com-lote><i class="mapa-cor-vizinho"></i>Lotes vizinhos (CTM)</span>
+      <span class="mapa-credito">Fundo: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a> · <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a></span>
+    </div>
+  </div>
+  <script src="{{ asset('mapa.js') }}" defer></script>
   <article class="ficha">
 
     <!-- cabeçalho que só aparece na impressão/PDF -->
@@ -631,6 +649,9 @@
 
       <div class="estudo-corpo">
 
+        {# coluna da esquerda: desenho + o controle de altura logo abaixo dele
+           (Fase 0 do plano); os números que o controle gera ficam à direita #}
+        <div class="estudo-col-esq">
         <div class="estudo-desenho">
           <button type="button" class="report-btn" id="btn-reportar-desenho" aria-label="Reportar desenho incorreto" title="O desenho não bate com o lote real?">⚑</button>
           <svg id="est-svg" viewBox="0 0 400 360" xmlns="http://www.w3.org/2000/svg" aria-label="Planta do lote em escala, com afastamentos, ocupação e permeabilidade">
@@ -659,6 +680,21 @@
           </div>
         </div>
 
+          <div class="controle-h">
+            <div class="controle-h-topo">
+              <label for="est-altura">Altura pretendida</label>
+              <output id="est-h-out">{% if estudo.desenho_inicial %}{{ '%.1f'|format(estudo.desenho_inicial.altura_usada)|replace('.', ',') }}{% else %}9,0{% endif %} m</output>
+            </div>
+            <input type="range" id="est-altura" min="3"
+                   max="{% if estudo.desenho_inicial %}{{ estudo.desenho_inicial.altura_maxima }}{% else %}50{% endif %}"
+                   step="0.5"
+                   value="{% if estudo.desenho_inicial %}{{ estudo.desenho_inicial.altura_usada }}{% else %}9{% endif %}">
+            <div class="controle-h-base">
+              <span class="mono" id="est-lat-calc"></span>
+              <span class="mono" id="est-h-max"></span>
+            </div>
+          </div>
+
         <div class="reportar-popover" id="reportar-popover" hidden>
           <button type="button" class="info-popover-fechar" data-fechar-reportar aria-label="Fechar">×</button>
           <p class="reportar-titulo">O desenho não bate com a realidade?</p>
@@ -670,6 +706,7 @@
           <button type="button" class="botao botao-mini" id="reportar-enviar">Enviar relato</button>
           <p class="reportar-obs mono" id="reportar-obs" hidden>Relato enviado, obrigado — isso ajuda a melhorar o motor.</p>
         </div>
+        </div>{# /estudo-col-esq #}
 
         <div class="estudo-painel">
 
@@ -688,8 +725,22 @@
           </div>
           {% endif %}
 
-          <div class="painel-grupo">
-            <span class="grupo-k">Do lote — não mudam com a altura</span>
+          <details class="painel-grupo painel-altura" open>
+            <summary class="grupo-k">Mudam com a altura pretendida</summary>
+            <div class="destaques-altura">
+              <div class="destaque-h">
+                <span class="k">Afastamento lateral</span>
+                <b id="est-lat-destaque">—</b> <i class="mono">m</i>
+              </div>
+              <div class="destaque-h destaque-h-area">
+                <span class="k">Área construtiva máx.</span>
+                <b id="est-area-max">—</b> <i class="mono">m²</i>
+              </div>
+            </div>
+          </details>
+
+          <details class="painel-grupo" open>
+            <summary class="grupo-k">Do lote — não mudam com a altura</summary>
             <div class="grupo-cel">
               {% if resultado.lote_real and resultado.lote_real.testadas %}
               <div class="gcel"><span class="k">Testada</span><b>{{ '%g'|format(resultado.lote_real.testadas[0].comprimento_m) }}</b><i class="mono">m</i></div>
@@ -702,12 +753,13 @@
               <div class="gcel"><span class="k">Unidades máx. (quota)</span><b id="estudo-un">—</b></div>
               <div class="gcel"><span class="k">Permeável mín. (TP)</span><b id="estudo-tp">—</b><i class="mono">m²</i></div>
             </div>
-          </div>
+          </details>
 
           {% if existente %}
           {% macro br(v) %}{{ ('%g'|format(v))|replace('.', ',') }}{% endmacro %}
-          <div class="painel-grupo painel-existente">
-            <span class="grupo-k">O que já existe no lote</span>
+          {# começa fechado: é o bloco mais longo e o que deixava o painel com scroll demais #}
+          <details class="painel-grupo painel-existente">
+            <summary class="grupo-k">O que já existe no lote</summary>
             <div class="grupo-cel">
               {% if existente.voo %}
               <div class="gcel"><span class="k">Projeção construída <em>· voo 2015</em></span><b>{{ br(existente.voo.projecao_m2) }}</b><i class="mono">m²</i>
@@ -764,33 +816,8 @@
                 <li><b>Desenho</b> — contornos arredondados a 10 cm e recortados na divisa do lote.</li>
               </ul>
             {% endcall %}
-          </div>
+          </details>
           {% endif %}
-
-          <div class="controle-h">
-            <div class="controle-h-topo">
-              <label for="est-altura">Altura pretendida</label>
-              <output id="est-h-out">{% if estudo.desenho_inicial %}{{ '%.1f'|format(estudo.desenho_inicial.altura_usada)|replace('.', ',') }}{% else %}9,0{% endif %} m</output>
-            </div>
-            <input type="range" id="est-altura" min="3"
-                   max="{% if estudo.desenho_inicial %}{{ estudo.desenho_inicial.altura_maxima }}{% else %}50{% endif %}"
-                   step="0.5"
-                   value="{% if estudo.desenho_inicial %}{{ estudo.desenho_inicial.altura_usada }}{% else %}9{% endif %}">
-            <div class="controle-h-base">
-              <span class="mono" id="est-lat-calc"></span>
-              <span class="mono" id="est-h-max"></span>
-            </div>
-          </div>
-          <div class="destaques-altura">
-            <div class="destaque-h">
-              <span class="k">Afastamento lateral</span>
-              <b id="est-lat-destaque">—</b> <i class="mono">m</i>
-            </div>
-            <div class="destaque-h destaque-h-area">
-              <span class="k">Área construtiva máx.</span>
-              <b id="est-area-max">—</b> <i class="mono">m²</i>
-            </div>
-          </div>
 
         </div>
       </div>
@@ -845,6 +872,7 @@
         <li><b>Cadastro Imobiliário do IPTU</b> — índice cadastral, endereço, infraestrutura do logradouro e dados da edificação.</li>
         <li><b>CINDACTA 1 (Aeronáutica)</b> — altura máxima liberada, lida ao vivo no cadastro que a Prefeitura mantém atualizado com as decisões do órgão.</li>
         <li><b>Lei 11.181/19 (Plano Diretor), Anexo XII</b> — coeficientes, quota de terreno, afastamentos e taxas, transcritos do texto oficial.</li>
+        <li><b>Mapa do topo</b> — o contorno do lote e dos vizinhos é o do Cadastro Técnico Municipal (acima). As ruas, nomes e construções do fundo são do <b>OpenStreetMap</b>, servidos pelo OpenFreeMap: servem para localizar, não são dado oficial.</li>
         <li><b>Mapbox</b> — só converte o endereço digitado em coordenada. O lote em si é sempre confirmado no cadastro da Prefeitura, nunca no Mapbox.</li>
       </ul>
       <p class="sub">Duas ressalvas honestas: o Plano Diretor está em revisão, então a base legal pode mudar; e a Prefeitura atualiza seus cadastros periodicamente, então pode haver divergência entre a cópia de julho/2026 usada aqui e o cadastro de hoje. Para decisões definitivas, confirme na fonte.</p>

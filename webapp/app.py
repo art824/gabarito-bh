@@ -36,6 +36,7 @@ from geocode import endereco_para_latlon, GeocodeError
 from indice_cadastral import buscar_por_indice, IndiceCadastralError
 from db_lotes import (
     registros_indice_por_nulotctm, edificacoes_por_lote, projetos_por_nulotctm, lote_por_nulotctm,
+    lotes_no_raio,
 )
 from cindacta import consultar_altimetria_aero, CindactaError
 
@@ -149,11 +150,12 @@ def _ponto_em_bh(lat, lon) -> bool:
 # 04/11/2026 testei uma fila de 2 vagas (rajada de 8 fichas) e ela NÃO baixou o
 # pico de memória (500 x 493 MB) e ainda devolveu 503 a 3 de 8 pessoas. O que sobe a
 # memória é o acúmulo de fichas calculadas, não a simultaneidade (ver CLAUDE.md).
-_TETO_POR_MIN = {"/consulta": 60, "/consulta/estudo": 300, "/consulta/dxf": 30}
+_TETO_POR_MIN = {"/consulta": 60, "/consulta/estudo": 300, "/consulta/dxf": 30,
+                 "/consulta/mapa": 120}
 
 
 def _e_pedido_pesado() -> bool:
-    if request.path in ("/consulta/estudo", "/consulta/dxf"):
+    if request.path in ("/consulta/estudo", "/consulta/dxf", "/consulta/mapa"):
         return True
     if request.path == "/consulta":
         # formulário vazio é barato; só conta quando há conta de verdade a fazer
@@ -1100,6 +1102,59 @@ def consulta_estudo():
     if desenho is None:
         return jsonify({"erro": "lote não identificado ou geometria complexa demais"}), 422
     return jsonify(desenho)
+
+
+_PARA_WGS84 = None  # transformador UTM 23S -> lat/lon, criado na 1ª chamada do mapa
+_RAIO_MAPA_M = 90    # vizinhos mostrados em volta do lote no mapa da ficha
+
+
+def _geojson_wgs84(geom) -> dict:
+    """Geometria shapely em EPSG:31983 -> dicionário GeoJSON em lat/lon,
+    com 6 casas (~10 cm), que é o que o mapa precisa."""
+    global _PARA_WGS84
+    if _PARA_WGS84 is None:
+        from pyproj import Transformer
+        _PARA_WGS84 = Transformer.from_crs(CRS_DADOS, "EPSG:4326", always_xy=True)
+    from shapely.ops import transform
+    g = transform(lambda x, y, z=None: _PARA_WGS84.transform(x, y), geom.simplify(0.1))
+    gj = g.__geo_interface__
+
+    def arred(c):
+        return [round(c[0], 6), round(c[1], 6)] if isinstance(c[0], float) else [arred(i) for i in c]
+    return {"type": gj["type"], "coordinates": arred(gj["coordinates"])}
+
+
+@app.route("/consulta/mapa", methods=["GET"])
+def consulta_mapa():
+    """Contorno do lote consultado e dos lotes vizinhos, em GeoJSON, para o
+    mapa no topo da ficha. Leve de propósito: duas consultas indexadas no
+    DuckDB (em disco), nada fica na memória. Se falhar, a ficha não muda:
+    o mapa simplesmente não aparece."""
+    lat, lon = request.args.get("lat"), request.args.get("lon")
+    if not _ponto_em_bh(lat, lon):
+        return jsonify({"erro": "parâmetros fora do intervalo aceito"}), 400
+    con = EXTRAS.get("lote_ctm")
+    if con is None:
+        return jsonify({"erro": "base de lotes indisponível"}), 503
+    ponto = gpd.GeoSeries([Point(float(lon), float(lat))], crs="EPSG:4326").to_crs(CRS_DADOS).iloc[0]
+    achado = localizar_lote(ponto, con)
+    nulot = str(achado["row"].get("NULOTCTM")) if achado else None
+
+    feicoes = []
+    for n, geom in lotes_no_raio(con, ponto.x, ponto.y, _RAIO_MAPA_M):
+        if nulot and str(n) == nulot:
+            continue
+        feicoes.append({"type": "Feature", "properties": {"papel": "vizinho"},
+                        "geometry": _geojson_wgs84(geom)})
+    if achado:
+        feicoes.append({"type": "Feature", "properties": {"papel": "lote"},
+                        "geometry": _geojson_wgs84(achado["poly"])})
+    resp = jsonify({"type": "FeatureCollection", "features": feicoes,
+                    "ponto": [round(float(lon), 6), round(float(lat), 6)],
+                    "lote_identificado": bool(achado)})
+    # o contorno do CTM não muda entre uma visita e outra: o navegador guarda 1 dia
+    resp.headers["Cache-Control"] = "public, max-age=86400"
+    return resp
 
 
 @app.route("/consulta/dxf", methods=["GET"])

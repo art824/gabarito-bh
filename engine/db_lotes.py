@@ -65,6 +65,27 @@ def lote_mais_proximo(con, x: float, y: float, limiar_m: float):
     }
 
 
+def lotes_no_raio(con, x: float, y: float, raio_m: float, limite: int = 400):
+    """Lotes CTM a até raio_m do ponto (x,y em EPSG:31983), pelo índice RTREE.
+    Usado pelo mapa da ficha (lote + vizinhos). Lista de (NULOTCTM, shapely)."""
+    if con is None:
+        return []
+    cur = con.cursor()
+    try:
+        linhas = cur.execute(
+            """
+            SELECT NULOTCTM, ST_AsWKB(geom) AS wkb
+            FROM lotes
+            WHERE ST_DWithin(geom, ST_Point(?, ?), ?)
+            LIMIT ?
+            """,
+            [x, y, raio_m, limite],
+        ).fetchall()
+    finally:
+        cur.close()
+    return [(n, _wkb.loads(bytes(w))) for n, w in linhas]
+
+
 def registros_indice_por_nulotctm(con, nulotctm: str):
     """Todos os registros do cadastro imobiliário (uma linha por 'economia')
     com esse NULOTCTM. Lista vazia se não achar ou banco não existir."""

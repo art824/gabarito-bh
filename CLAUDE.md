@@ -36,9 +36,11 @@ engine/db_lotes.py    consulta indexada em disco (DuckDB + RTREE): lotes, IPTU, 
 engine/cindacta.py    altura máxima por aeródromo, WFS ao vivo da PBH (cache 6 h, freio 30/min)
 engine/dxf_lote.py    exporta o estudo para DXF em UTM real
 engine/geocode.py     endereço -> lat/lon (Mapbox); indice_cadastral.py busca direta por índice
-webapp/app.py         Flask: /, /consulta, /consulta/estudo, /consulta/dxf, /reportar,
-                      /privacidade, /saude, robots/sitemap; cabeçalhos de segurança e limites
-webapp/templates, static  páginas, style.css, script.js, fonts/ (hospedadas aqui)
+webapp/app.py         Flask: /, /consulta, /consulta/estudo, /consulta/dxf, /consulta/mapa,
+                      /reportar, /privacidade, /saude, robots/sitemap; cabeçalhos e limites
+webapp/templates, static  páginas, style.css, script.js, mapa.js, fonts/ (hospedadas aqui)
+                      mapa.js: MapLibre 4.7.1 (unpkg) + fundo OpenFreeMap (sem chave);
+                      o contorno do lote/vizinhos vem de /consulta/mapa (DuckDB, ~0,5 s, 0 MB)
 data/params/          Anexo XII em JSON (ca_quota, afastamentos_alturas) + base_legal.json
 data/camadas_extra/   camadas pequenas versionadas (proteção cultural) usadas como reserva
 data/geo/             shapefiles e cache do BHMap: NÃO versionado (1,5 GB), só local
@@ -76,6 +78,10 @@ Token Mapbox em `.env` (`MAPBOX_TOKEN=...`), nunca versionado.
 - O preview do Claude Code reporta `prefers-reduced-motion: reduce` sempre; não esconder
   conteúdo atrás de animação sem fallback.
 - `consultar()` é rechamado a cada arrastada do slider: nada de consulta de rede dentro dele.
+- Mapa: screenshot do preview logo após carregar sai em branco (o mapa ainda não desenhou);
+  esperar alguns segundos antes de concluir que quebrou. O desvanecimento é película por cima
+  (`.mapa-lote::after`), não `mask-image`. O mapa NUNCA pode ser dependência da ficha: se falhar,
+  some (`mapa-falhou`).
 
 ## Estado e pendências
 Ver `docs/visao_e_plano.md` (fases) e as notas privadas do Arthur. Pontos técnicos abertos:

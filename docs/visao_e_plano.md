@@ -175,6 +175,15 @@ FASE 1  MAPA  ◄── a fundação
                  └── FASE 7  busca reversa / escala de bairro
 ```
 
+### Andamento
+- **04/11/2026 — Fases 0 e 1 implementadas (local).** Título some com ficha na tela;
+  estudo com slider na coluna da esquerda e grupos recolhíveis ("Mudam com a altura",
+  "Do lote", "O que já existe" fechado). Mapa no topo: MapLibre + fundo OpenFreeMap
+  (OpenStreetMap, sem chave, sem custo), contorno do CTM do lote e vizinhos num raio de 90 m
+  pela rota `/consulta/mapa` (DuckDB em disco; RAM medida: 329 MB antes e depois de 30
+  mapas). Decisão: a Fase 1 NÃO precisou de PMTiles; ele só entra na Fase 2 (camadas da
+  cidade inteira).
+
 ### FASE 0 — Arrumar o que já existe
 *Independente de tudo. Pode ser feito já.*
 
