@@ -82,7 +82,7 @@ nav .container {
   padding: 3px 8px;
 }
 nav .links { display: flex; align-items: center; gap: 26px; font-size: 14px; }
-nav .links a { color: var(--tinta-2); font-weight: 500; }
+nav .links a { color: var(--tinta-2); font-weight: 500; padding: 5px 0; }
 nav .links a.destaque {
   color: var(--papel); background: var(--tinta);
   padding: 9px 18px; font-weight: 600;
@@ -456,7 +456,7 @@ footer /* assinatura do autor + contato — precisa ficar LEGÍVEL (antes o cont
   font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em;
   color: var(--grafite);
 }
-.legal a { color: var(--grafite); text-decoration: underline; text-underline-offset: 2px; }
+.legal a { color: var(--grafite); text-decoration: underline; text-underline-offset: 2px; display: inline-block; padding: 6px 2px; }
 .legal a:hover { color: var(--terra); }
 
 .footer-feedback {
@@ -1741,3 +1741,7 @@ summary.grupo-k:focus-visible { outline: 2px solid var(--terra); outline-offset:
 .faq { max-width: 760px; }
 .faq h3 { font-size: 19px; margin: 28px 0 8px; }
 .faq p { margin: 0; line-height: 1.6; }
+
+/* menu do topo: "Sobre" só em tela larga (no celular fica no rodapé); links não quebram linha */
+nav .links a { white-space: nowrap; }
+@media (max-width: 640px) { nav .links a.nav-sobre { display: none; } }

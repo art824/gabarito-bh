@@ -108,7 +108,10 @@ def _cabecalhos(resp):
         "Content-Security-Policy",
         "frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'",
     )
-    if request.path.startswith("/static/") and resp.status_code == 200:
+    if request.path.startswith("/static/fonts/") and resp.status_code == 200:
+        # as fontes nunca mudam de nome: um ano, sem revalidar
+        resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif request.path.startswith("/static/") and resp.status_code == 200:
         # style.css/script.js vêm com ?v=<data do arquivo> (ver _asset_versioning):
         # a URL muda quando o arquivo muda, então pode ficar um ano no cache.
         if "v" in request.args:

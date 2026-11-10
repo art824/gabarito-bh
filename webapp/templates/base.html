@@ -24,13 +24,13 @@
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
 <meta name="theme-color" content="#F2EDE0">
 <meta name="description" content="{% block descricao %}Parâmetros urbanísticos de qualquer lote de BH: zoneamento, coeficientes, afastamentos, altura do CINDACTA e estudo volumétrico. Grátis e sem cadastro.{% endblock %}">
-<link rel="canonical" href="https://gabaritoarq.com.br{% block canonical %}{{ request.path }}{% endblock %}">
+<link rel="canonical" href="https://gabaritoarq.com.br{% block canonical %}{{ request.path.rstrip('/') or '/' }}{% endblock %}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Gabarito">
 <meta property="og:locale" content="pt_BR">
 <meta property="og:title" content="{% block og_titulo %}Gabarito: parâmetros urbanísticos de qualquer lote de BH{% endblock %}">
 <meta property="og:description" content="{% block og_descricao %}Zoneamento, coeficientes, afastamentos, altura do CINDACTA e estudo volumétrico do lote. Grátis e sem cadastro.{% endblock %}">
-<meta property="og:url" content="https://gabaritoarq.com.br{{ request.path }}">
+<meta property="og:url" content="https://gabaritoarq.com.br{{ request.path.rstrip('/') or '/' }}">
 <meta property="og:image" content="https://gabaritoarq.com.br/static/og-gabarito.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -50,7 +50,7 @@
     <a class="wordmark" href="/">Gabarito<span class="bh">BH</span></a>
     <div class="links">
       <a href="/#a-ficha">A ficha</a>
-      <a href="/sobre">Sobre</a>
+      <a href="/sobre" class="nav-sobre">Sobre</a>
       <a href="/consulta" class="destaque">Consultar lote</a>
     </div>
   </div>
