@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block titulo %}Exemplos de ficha urbanística de lote em BH{% endblock %}
+{% block descricao %}Três fichas urbanísticas completas de lotes reais de Belo Horizonte (Savassi, Pampulha e Horto): zoneamento, ADEs, coeficientes, afastamentos, proteção cultural e altura do CINDACTA.{% endblock %}
+{% block og_titulo %}Exemplos de ficha urbanística de lote em BH | Gabarito{% endblock %}
+{% block og_descricao %}Veja tudo o que a ficha do Gabarito mostra, em três lotes reais de Belo Horizonte.{% endblock %}
+{% block conteudo %}
+<div class="consulta-topo" style="padding-bottom:40px">
+  <div class="container" style="max-width:860px">
+    <p class="mono" style="letter-spacing:.16em; font-size:12px; text-transform:uppercase; margin:0 0 12px">Exemplos</p>
+    <h1>Fichas de exemplo</h1>
+    <p>Esta página mostra o que o Gabarito entrega para um lote de Belo Horizonte, em três lotes reais de zoneamentos diferentes: Savassi (OP-3, com ADE e proteção cultural), Pampulha (PA-1, com ADE Pampulha) e Horto (AGEUC). Cada ficha reúne identificação do lote, enquadramento na Lei 11.181/19, proteção cultural e ambiental, altura liberada pelo CINDACTA, parâmetros construtivos e potencial construtivo, sempre com a fonte de cada dado e a lista do que a ficha não verifica.</p>
+    <p class="aviso-exemplo"><b>São exemplos de novembro de 2026 (gerados em 10/11/2026).</b> A ficha do seu lote depende do endereço, das ADEs e das exceções que incidem sobre ele, e a base é atualizada manualmente (cadastros de julho/2026; a altura do CINDACTA é consultada ao vivo a cada busca). A lei também pode mudar: o Plano Diretor está em revisão. Para ver o seu lote, com o mapa e o estudo de altura (slider de altura, afastamentos e área construtiva máxima, exportável em DXF), <a href="/consulta">consulte um endereço no Gabarito</a>.</p>
+  </div>
+</div>
+<div class="container exemplos-wrap" style="max-width:980px">
+{% include "_exemplos_fichas.html" %}
+  <p class="cta-exemplos"><a class="botao" href="/consulta">Consultar o meu lote →</a></p>
+</div>
+{% endblock %}

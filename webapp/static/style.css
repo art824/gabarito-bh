@@ -1745,3 +1745,11 @@ summary.grupo-k:focus-visible { outline: 2px solid var(--terra); outline-offset:
 /* menu do topo: "Sobre" só em tela larga (no celular fica no rodapé); links não quebram linha */
 nav .links a { white-space: nowrap; }
 @media (max-width: 640px) { nav .links a.nav-sobre { display: none; } }
+
+/* Vitrine /exemplos: fichas reais em texto */
+.ficha-exemplo { margin: 0 0 56px; }
+.ficha-exemplo .ex-titulo { font-size: 24px; margin: 0 0 16px; }
+.aviso-exemplo { font-size: 14px; line-height: 1.6; }
+.cta-exemplos { margin: 8px 0 72px; text-align: center; }
+.cta-meio .link-exemplos { margin-left: 18px; color: var(--papel); text-decoration: underline; text-underline-offset: 3px; font-size: 14px; }
+@media (max-width: 640px) { .cta-meio .link-exemplos { display: block; margin: 14px 0 0; } }

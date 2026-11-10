@@ -1324,6 +1324,14 @@ def reportar_geral():
     return jsonify({"ok": True})
 
 
+@app.route("/exemplos", methods=["GET"], strict_slashes=False)
+def exemplos():
+    """Vitrine: 3 fichas reais em texto (geradas por scripts/gerar_exemplos.py).
+    Estática: não consulta CINDACTA nem Mapbox. Mostra à IA e aos buscadores o que a
+    ficha entrega, sem permitir consultar o lote de ninguém."""
+    return render_template("exemplos.html")
+
+
 @app.route("/sobre", methods=["GET"], strict_slashes=False)
 def sobre():
     return render_template("sobre.html")
@@ -1392,6 +1400,7 @@ def sitemap_xml():
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
         "<url><loc>https://gabaritoarq.com.br/</loc></url>"
         "<url><loc>https://gabaritoarq.com.br/consulta</loc></url>"
+        "<url><loc>https://gabaritoarq.com.br/exemplos</loc></url>"
         "<url><loc>https://gabaritoarq.com.br/sobre</loc></url>"
         "<url><loc>https://gabaritoarq.com.br/privacidade</loc></url></urlset>\n",
         mimetype="application/xml",
@@ -1411,6 +1420,7 @@ Feito por Arthur Cunha Ferreira, graduando em Arquitetura e Urbanismo pela UFMG.
 
 ## Páginas
 - [Página inicial](https://gabaritoarq.com.br/): o que é e perguntas frequentes
+- [Exemplos de ficha](https://gabaritoarq.com.br/exemplos): três fichas completas de lotes reais (Savassi, Pampulha, Horto), com todas as seções
 - [Sobre](https://gabaritoarq.com.br/sobre): autoria, fontes e limites
 - [Consultar lote](https://gabaritoarq.com.br/consulta): busca por endereço ou índice cadastral
 - [Privacidade](https://gabaritoarq.com.br/privacidade)
