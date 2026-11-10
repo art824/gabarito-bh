@@ -1,6 +1,7 @@
 {% extends "base.html" %}
-{% block titulo %}Sobre o Gabarito — Gabarito{% endblock %}
-{% block descricao %}Quem faz o Gabarito, de onde vêm os dados, o que a ferramenta cobre e o que ela não verifica.{% endblock %}
+{% block titulo %}Sobre o Gabarito: quem faz, fontes e limites{% endblock %}
+{% block descricao %}Quem faz o Gabarito, de onde vêm os dados (Lei 11.181/19, geodados da Prefeitura de BH e CINDACTA), o que a ferramenta cobre e o que ela não verifica.{% endblock %}
+{% block jsonld %}<script type="application/ld+json">{"@context":"https://schema.org","@type":"AboutPage","@id":"https://gabaritoarq.com.br/sobre","url":"https://gabaritoarq.com.br/sobre","name":"Sobre o Gabarito","inLanguage":"pt-BR","dateModified":"2026-11-10","isPartOf":{"@id":"https://gabaritoarq.com.br/#site"},"mainEntity":{"@id":"https://gabaritoarq.com.br/sobre#arthur","@type":"Person","name":"Arthur Cunha Ferreira","jobTitle":"Graduando em Arquitetura e Urbanismo","affiliation":{"@type":"CollegeOrUniversity","name":"Universidade Federal de Minas Gerais (UFMG)"}}}</script>{% endblock %}
 {% block og_titulo %}Sobre o Gabarito{% endblock %}
 {% block og_descricao %}Quem faz o Gabarito, de onde vêm os dados e o que a ferramenta não verifica.{% endblock %}
 {% block conteudo %}
@@ -26,6 +27,7 @@
 
   <h3>Encontrou um erro?</h3>
   <p>Use o botão "Reportar um erro" no rodapé de qualquer página. Cada relato é lido.</p>
+    <p class="sub" style="margin-top:28px">Última atualização desta página: 10/11/2026.</p>
     <p style="margin-top:20px"><a class="botao" href="/">Voltar ao início</a></p>
   </div>
 </div>

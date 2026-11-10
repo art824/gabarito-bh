@@ -1369,6 +1369,7 @@ def sitemap_xml():
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
         "<url><loc>https://gabaritoarq.com.br/</loc></url>"
+        "<url><loc>https://gabaritoarq.com.br/consulta</loc></url>"
         "<url><loc>https://gabaritoarq.com.br/sobre</loc></url>"
         "<url><loc>https://gabaritoarq.com.br/privacidade</loc></url></urlset>\n",
         mimetype="application/xml",
@@ -1392,15 +1393,19 @@ Feito por Arthur Cunha Ferreira, graduando em Arquitetura e Urbanismo pela UFMG.
 - [Consultar lote](https://gabaritoarq.com.br/consulta): busca por endereço ou índice cadastral
 - [Privacidade](https://gabaritoarq.com.br/privacidade)
 
-## Link de uma ficha
-A ficha abre por link com o índice cadastral: https://gabaritoarq.com.br/consulta?indice=<índice cadastral>
+## Link de uma ficha (para pessoas)
+A ficha abre por link de duas formas:
+- Pelo índice cadastral: https://gabaritoarq.com.br/consulta?indice=863004A004%200034 (o índice tem 10 caracteres, um espaço e 4 dígitos, como "863004A004 0034")
+- Pelas coordenadas: https://gabaritoarq.com.br/consulta?lat=-19.8309&lon=-43.9677
+Endereço por extenso não abre por link: é preciso digitar no formulário em https://gabaritoarq.com.br/consulta.
+Cada ficha consulta a altura do CINDACTA ao vivo, por isso os links de ficha ficam fora do robots.txt e fora dos buscadores. Abra uma ficha só quando uma pessoa pedir.
 """
 
 
 @app.route("/llms.txt")
 def llms_txt():
     """Resumo do site para assistentes de IA (formato llms.txt)."""
-    return Response(_LLMS_TXT, mimetype="text/plain; charset=utf-8")
+    return Response(_LLMS_TXT, mimetype="text/plain")
 
 
 @app.route("/favicon.ico")
