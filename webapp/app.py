@@ -92,12 +92,22 @@ def _cabecalhos(resp):
     """Cabeçalhos de segurança + cache dos arquivos estáticos.
 
     CSP completo ficou de fora de propósito: a página usa scripts inline e o
-    Google Analytics, e uma política errada deixaria o site em branco."""
+    Google Analytics, e uma política errada deixaria o site em branco. Vai só
+    a parte parcial (sem controle de scripts), que não tem como quebrar nada."""
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
     resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     resp.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)")
-    resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+    # includeSubDomains: decisão do dono (10/11/2026): o Gabarito nunca vai usar
+    # subdomínio em HTTP. Sem "preload" de propósito (é difícil de desfazer).
+    resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    # CSP PARCIAL de propósito: NÃO tem script-src/default-src, então não pode
+    # quebrar o mapa, o Google Analytics nem os scripts inline. Só proíbe ser
+    # embutido em outro site, plugins, <base> forjada e formulário enviado pra fora.
+    resp.headers.setdefault(
+        "Content-Security-Policy",
+        "frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'",
+    )
     if request.path.startswith("/static/") and resp.status_code == 200:
         # style.css/script.js vêm com ?v=<data do arquivo> (ver _asset_versioning):
         # a URL muda quando o arquivo muda, então pode ficar um ano no cache.
@@ -1330,13 +1340,23 @@ def pagina_nao_encontrada(_erro):
 
 @app.route("/robots.txt")
 def robots_txt():
-    """Robôs de busca ficam FORA das fichas por enquanto. Cada ficha consulta
+    """10/11/2026: a página /consulta SEM parâmetros (formulário vazio, não chama
+    o CINDACTA) pode ser indexada; fichas (/consulta?...) e rotas internas
+    (/consulta/mapa, /dxf, /estudo) continuam bloqueadas. "$" e "?" funcionam
+    no Google e no Bing. Robô que não entende "$" trata /consulta como
+    liberado (é só o formulário vazio) e as fichas seguem bloqueadas.
+
+    Robôs de busca ficam FORA das fichas por enquanto. Cada ficha consulta
     o CINDACTA ao vivo na PBH; um rastreador varrendo milhares de links
     poderia levar a Prefeitura a bloquear o Gabarito. A página inicial
     continua liberada. Abrir as fichas pro Google é decisão separada (com
     sitemap pequeno), não efeito colateral do link compartilhável."""
     return Response(
-        "User-agent: *\nDisallow: /consulta\n\nSitemap: https://gabaritoarq.com.br/sitemap.xml\n",
+        "User-agent: *\n"
+        "Allow: /consulta$\n"
+        "Disallow: /consulta?\n"
+        "Disallow: /consulta/\n\n"
+        "Sitemap: https://gabaritoarq.com.br/sitemap.xml\n",
         mimetype="text/plain",
     )
 
