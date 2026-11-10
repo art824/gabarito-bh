@@ -678,9 +678,14 @@ _BH_LON = (-44.10, -43.80)
 #   2. freio: no máximo 30 consultas novas por minuto por processo. Passou
 #      disso, a ficha mostra o CINDACTA como "não verificado" (o mesmo
 #      estado de serviço fora do ar) em vez de insistir na Prefeitura.
+#   3. teto por HORA (10/11/2026): no máximo 300 consultas novas por hora por
+#      processo. Pega o robô "educado" que fica abaixo de 30/min o dia todo.
+#      Quando bate, vale o mesmo estado "não verificado" até a janela esfriar.
 _CINDACTA_VALIDADE_S = 6 * 3600
 _CINDACTA_CACHE_MAX = 5000
 _CINDACTA_MAX_POR_MINUTO = 30
+_CINDACTA_MAX_POR_HORA = 300
+_CINDACTA_CHAMADAS_HORA: deque = deque()
 _CINDACTA_CACHE: dict = {}
 _CINDACTA_CHAMADAS: deque = deque()
 _CINDACTA_TRAVA = threading.Lock()
@@ -702,9 +707,13 @@ def _montar_cindacta(lat: float, lon: float) -> dict:
         if not em_cache:
             while _CINDACTA_CHAMADAS and agora - _CINDACTA_CHAMADAS[0] > 60:
                 _CINDACTA_CHAMADAS.popleft()
-            if len(_CINDACTA_CHAMADAS) >= _CINDACTA_MAX_POR_MINUTO:
+            while _CINDACTA_CHAMADAS_HORA and agora - _CINDACTA_CHAMADAS_HORA[0] > 3600:
+                _CINDACTA_CHAMADAS_HORA.popleft()
+            if (len(_CINDACTA_CHAMADAS) >= _CINDACTA_MAX_POR_MINUTO
+                    or len(_CINDACTA_CHAMADAS_HORA) >= _CINDACTA_MAX_POR_HORA):
                 return {"disponivel": None}  # freio: não insiste na PBH
             _CINDACTA_CHAMADAS.append(agora)
+            _CINDACTA_CHAMADAS_HORA.append(agora)
     if em_cache:
         r = guardado[1]
     else:
@@ -1312,12 +1321,12 @@ def reportar_geral():
     return jsonify({"ok": True})
 
 
-@app.route("/sobre", methods=["GET"])
+@app.route("/sobre", methods=["GET"], strict_slashes=False)
 def sobre():
     return render_template("sobre.html")
 
 
-@app.route("/privacidade", methods=["GET"])
+@app.route("/privacidade", methods=["GET"], strict_slashes=False)
 def privacidade():
     return render_template("privacidade.html")
 
