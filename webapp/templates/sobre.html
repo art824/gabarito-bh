@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block titulo %}Sobre o Gabarito: quem faz, fontes e limites{% endblock %}
 {% block descricao %}Quem faz o Gabarito, de onde vêm os dados (Lei 11.181/19, geodados da Prefeitura de BH e CINDACTA), o que a ferramenta cobre e o que ela não verifica.{% endblock %}
-{% block jsonld %}<script type="application/ld+json">{"@context":"https://schema.org","@type":"AboutPage","@id":"https://gabaritoarq.com.br/sobre","url":"https://gabaritoarq.com.br/sobre","name":"Sobre o Gabarito","inLanguage":"pt-BR","dateModified":"2026-11-10","isPartOf":{"@id":"https://gabaritoarq.com.br/#site"},"mainEntity":{"@id":"https://gabaritoarq.com.br/sobre#arthur","@type":"Person","name":"Arthur Cunha Ferreira","jobTitle":"Graduando em Arquitetura e Urbanismo","affiliation":{"@type":"CollegeOrUniversity","name":"Universidade Federal de Minas Gerais (UFMG)"}}}</script>{% endblock %}
+{% block jsonld %}<script type="application/ld+json">{"@context":"https://schema.org","@type":"AboutPage","@id":"https://gabaritoarq.com.br/sobre","url":"https://gabaritoarq.com.br/sobre","name":"Sobre o Gabarito","inLanguage":"pt-BR","dateModified":"2026-11-10","isPartOf":{"@id":"https://gabaritoarq.com.br/#site"},"mainEntity":{"@id":"https://gabaritoarq.com.br/sobre#arthur","@type":"Person","name":"Arthur Cunha Ferreira","jobTitle":"Graduando em Arquitetura e Urbanismo","sameAs":["https://www.linkedin.com/in/arthur-cunha-ferreira-873a672bb/","http://lattes.cnpq.br/6143467336960761"],"affiliation":{"@type":"CollegeOrUniversity","name":"Universidade Federal de Minas Gerais (UFMG)"}}}</script>{% endblock %}
 {% block og_titulo %}Sobre o Gabarito{% endblock %}
 {% block og_descricao %}Quem faz o Gabarito, de onde vêm os dados e o que a ferramenta não verifica.{% endblock %}
 {% block conteudo %}
@@ -12,11 +12,11 @@
   <p>O Gabarito é uma ferramenta gratuita que mostra, numa tela só, os parâmetros urbanísticos de qualquer lote de Belo Horizonte: zoneamento, ADEs, coeficientes de aproveitamento, afastamentos, permeabilidade, proteção cultural, altura liberada pelo CINDACTA e um estudo de altura que pode ser baixado em DXF.</p>
 
   <h3>Quem faz</h3>
-  <p>O Gabarito é desenvolvido por <b>Arthur Cunha Ferreira</b>, graduando em Arquitetura e Urbanismo pela UFMG. Ele nasceu da primeira manhã de todo estudo preliminar, gasta garimpando parâmetro no BHMap, na lei e no site da Prefeitura. Contato: arthurcunhaf@gmail.com.</p>
+  <p>O Gabarito é desenvolvido por <b>Arthur Cunha Ferreira</b>, graduando em Arquitetura e Urbanismo pela UFMG. Ele nasceu da primeira manhã de todo estudo preliminar, gasta garimpando parâmetro no BHMap, na lei e no site da Prefeitura. Contato: arthurcunhaf@gmail.com. Perfis: <a href="https://www.linkedin.com/in/arthur-cunha-ferreira-873a672bb/" rel="me noopener">LinkedIn</a> · <a href="http://lattes.cnpq.br/6143467336960761" rel="me noopener">Currículo Lattes</a>.</p>
 
   <h3>De onde vêm os dados</h3>
   <ul>
-    <li>Lei 11.181/19 (Plano Diretor de Belo Horizonte) e seus anexos.</li>
+    <li>Lei 11.181/19 (Plano Diretor de Belo Horizonte) e seus anexos. Página oficial da Prefeitura: <a href="https://prefeitura.pbh.gov.br/politica-urbana/planejamento-urbano/plano-diretor/proposta" rel="noopener">Plano Diretor, Lei 11.181/19</a>.</li>
     <li>Camadas de geodados da Prefeitura de Belo Horizonte (BHMAP) e Cadastro Técnico, em uma cópia que é atualizada manualmente.</li>
     <li>Altura máxima liberada pelo CINDACTA, consultada ao vivo a cada busca.</li>
     <li>Fundo do mapa: © OpenStreetMap, via OpenFreeMap.</li>

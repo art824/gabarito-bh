@@ -1346,12 +1346,22 @@ def robots_txt():
     no Google e no Bing. Robô que não entende "$" trata /consulta como
     liberado (é só o formulário vazio) e as fichas seguem bloqueadas.
 
+    Exceção: ChatGPT-User, Claude-User e Perplexity-User agem a pedido de UMA
+    pessoa (abrem uma ficha por vez); podem abrir /consulta?indice=..., mas não
+    as rotas internas. O freio de 30 consultas/min ao CINDACTA e o teto por IP
+    (ver _montar_cindacta e _TETO_POR_MIN) valem para qualquer visitante.
+
     Robôs de busca ficam FORA das fichas por enquanto. Cada ficha consulta
     o CINDACTA ao vivo na PBH; um rastreador varrendo milhares de links
     poderia levar a Prefeitura a bloquear o Gabarito. A página inicial
     continua liberada. Abrir as fichas pro Google é decisão separada (com
     sitemap pequeno), não efeito colateral do link compartilhável."""
     return Response(
+        "User-agent: ChatGPT-User\n"
+        "User-agent: Claude-User\n"
+        "User-agent: Perplexity-User\n"
+        "Allow: /consulta\n"
+        "Disallow: /consulta/\n\n"
         "User-agent: *\n"
         "Allow: /consulta$\n"
         "Disallow: /consulta?\n"
@@ -1398,7 +1408,7 @@ A ficha abre por link de duas formas:
 - Pelo índice cadastral: https://gabaritoarq.com.br/consulta?indice=863004A004%200034 (o índice tem 10 caracteres, um espaço e 4 dígitos, como "863004A004 0034")
 - Pelas coordenadas: https://gabaritoarq.com.br/consulta?lat=-19.8309&lon=-43.9677
 Endereço por extenso não abre por link: é preciso digitar no formulário em https://gabaritoarq.com.br/consulta.
-Cada ficha consulta a altura do CINDACTA ao vivo, por isso os links de ficha ficam fora do robots.txt e fora dos buscadores. Abra uma ficha só quando uma pessoa pedir.
+Cada ficha consulta a altura do CINDACTA ao vivo, por isso os links de ficha ficam bloqueados no robots.txt para rastreadores em massa e fora dos buscadores. Assistentes que agem a pedido de uma pessoa (ChatGPT-User, Claude-User, Perplexity-User) podem abrir uma ficha de cada vez; abra só quando uma pessoa pedir.
 """
 
 
