@@ -33,18 +33,20 @@ só que o comando tenha rodado.
 engine/consulta.py    motor: lat/lon -> ficha (camadas, exceções de ADE, testadas, proteção)
 engine/desenho_lote.py envelope construtivo (recuo por aresta = lote menos buffers), TP, mancha
 engine/db_lotes.py    consulta indexada em disco (DuckDB + RTREE): lotes, IPTU, edificação
-engine/cindacta.py    altura máxima por aeródromo, WFS ao vivo da PBH (cache 6 h, freio 30/min)
+engine/cindacta.py    altura máxima por aeródromo, WFS ao vivo da PBH (cache 6 h; freio no app.py: 30/min e 300/h por processo)
 engine/dxf_lote.py    exporta o estudo para DXF em UTM real
 engine/geocode.py     endereço -> lat/lon (Mapbox); indice_cadastral.py busca direta por índice
 webapp/app.py         Flask: /, /consulta, /consulta/estudo, /consulta/dxf, /consulta/mapa,
-                      /reportar, /privacidade, /saude, robots/sitemap; cabeçalhos e limites
+                      /reportar, /privacidade, /sobre, /exemplos, /llms.txt, /saude, robots/sitemap; cabeçalhos (CSP parcial, HSTS) e limites
 webapp/templates, static  páginas, style.css, script.js, mapa.js, fonts/ (hospedadas aqui)
-                      mapa.js: MapLibre 4.7.1 (unpkg) + fundo OpenFreeMap (sem chave);
+                      mapa.js: MapLibre 4.7.1 (hospedado em static/vendor) + fundo OpenFreeMap (sem chave);
                       o contorno do lote/vizinhos vem de /consulta/mapa (DuckDB, ~0,5 s, 0 MB)
 data/params/          Anexo XII em JSON (ca_quota, afastamentos_alturas) + base_legal.json
 data/camadas_extra/   camadas pequenas versionadas (proteção cultural) usadas como reserva
 data/geo/             shapefiles e cache do BHMap: NÃO versionado (1,5 GB), só local
 tests/                regressao_lotes.py (4 lotes IBED), cobertura_anexo.py, diag_anexo.py
+scripts/gerar_exemplos.py  refaz webapp/templates/_exemplos_fichas.html (vitrine /exemplos: 3 fichas reais em texto);
+                      rodar de novo quando a base ou a lei mudarem (gasta Mapbox e CINDACTA)
 ```
 
 ## Comandos
@@ -82,6 +84,13 @@ Token Mapbox em `.env` (`MAPBOX_TOKEN=...`), nunca versionado.
   esperar alguns segundos antes de concluir que quebrou. O desvanecimento é película por cima
   (`.mapa-lote::after`), não `mask-image`. O mapa NUNCA pode ser dependência da ficha: se falhar,
   some (`mapa-falhou`).
+
+## Decisões de SEO e IA (10/11/2026)
+- robots.txt: fichas `/consulta?...` e rotas `/consulta/...` bloqueadas para TODOS os robôs (protege a consulta ao vivo ao
+  CINDACTA/PBH); só o formulário vazio `/consulta` é indexável. A estratégia é a IA entender a ficha pela vitrine `/exemplos`
+  e recomendar o site, sem consultar lotes sozinha: não criar endpoint de busca/JSON para robôs sem decisão do dono.
+- Sem subdomínio em HTTP (HSTS com includeSubDomains). CSP é parcial de propósito (sem script-src).
+- A vitrine é foto de uma data: cada exemplo leva a data e o aviso; nada de "ao vivo" dentro dela.
 
 ## Estado e pendências
 Ver `docs/visao_e_plano.md` (fases) e as notas privadas do Arthur. Pontos técnicos abertos:
