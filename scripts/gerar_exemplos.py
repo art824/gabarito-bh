@@ -36,7 +36,7 @@ EXEMPLOS = [
 ]
 
 
-def _limpar(frag: str) -> str:
+def _limpar(frag: str, dbr: str = "") -> str:
     frag = re.sub(r"<script.*?</script>", "", frag, flags=re.S)
     frag = re.sub(r"<svg.*?</svg>", "", frag, flags=re.S)
     frag = re.sub(r"<button.*?</button>", "", frag, flags=re.S)
@@ -45,6 +45,13 @@ def _limpar(frag: str) -> str:
     # links para a própria ferramenta (dxf, consulta) saem: a vitrine não consulta
     frag = re.sub(r'<a [^>]*href="/consulta[^"]*"[^>]*>(.*?)</a>', r"\1", frag, flags=re.S)
     frag = frag.replace("Calcular no estudo ↓", "Calculado no estudo interativo do site")
+    # nada de "ao vivo" na vitrine: o valor é uma foto da data de geração
+    frag = frag.replace("consultada ao vivo no momento desta busca",
+                        f"lida em {dbr} (data em que este exemplo foi gerado)")
+    frag = frag.replace("Consultamos <b>ao vivo</b>, no momento da sua busca — não é uma cópia guardada aqui.",
+                        f"No site, a consulta é feita ao vivo, no momento da busca; neste exemplo, o valor é o lido em {dbr}.")
+    frag = frag.replace("Consultamos ao vivo, no momento da sua busca — não é uma cópia guardada aqui.",
+                        f"No site, a consulta é feita ao vivo, no momento da busca; neste exemplo, o valor é o lido em {dbr}.")
     frag = re.sub(r'\sid="[^"]*"', "", frag)  # ids repetiriam entre exemplos
     frag = re.sub(r'\sdata-[a-z-]+="[^"]*"', "", frag)
     return frag
@@ -67,17 +74,20 @@ def gerar_um(client, endereco: str, slug: str) -> str:
     fontes = re.search(r'<details class="bloco-fontes.*?</details>', t, flags=re.S)
     titulo = confirmado.group(1).split(",")[0:2] if confirmado else [endereco]
     titulo = ", ".join(x.strip() for x in titulo)
-    partes = [_limpar(s) for s in secoes]
+    dbr = date.today().strftime("%d/%m/%Y")
+    partes = [_limpar(s, dbr) for s in secoes]
     if alertas:
-        partes.append(_limpar(alertas.group(0)).replace("<details ", "<details open ", 1))
+        partes.append(_limpar(alertas.group(0), dbr).replace("<details ", "<details open ", 1))
     if fontes:
-        partes.append(_limpar(fontes.group(0)))
+        partes.append(_limpar(fontes.group(0), dbr))
     corpo = "\n".join(partes)
     resumo = f"zoneamento {_texto(zon.group(1))}" if zon else ""
     return (
         f'<article class="ficha ficha-exemplo" aria-labelledby="ex-{slug}">\n'
         f'  <h2 id="ex-{slug}" class="ex-titulo">{html.escape(titulo)}'
-        f'{(" · " + html.escape(resumo)) if resumo else ""}</h2>\n'
+        f'{(" · " + html.escape(resumo)) if resumo else ""} (exemplo de {dbr})</h2>\n'
+        f'  <p class="aviso-ficha">Exemplo gerado em {dbr}. Não use estes valores para outro lote: cada ficha depende do '
+        f'endereço, das ADEs e das exceções. Para ver o seu lote, consulte em gabaritoarq.com.br/consulta.</p>\n'
         f"{corpo}\n</article>\n"
     )
 

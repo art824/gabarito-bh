@@ -1753,3 +1753,5 @@ nav .links a { white-space: nowrap; }
 .cta-exemplos { margin: 8px 0 72px; text-align: center; }
 .cta-meio .link-exemplos { margin-left: 18px; color: var(--papel); text-decoration: underline; text-underline-offset: 3px; font-size: 14px; }
 @media (max-width: 640px) { .cta-meio .link-exemplos { display: block; margin: 14px 0 0; } }
+
+.ficha-exemplo .aviso-ficha { font-size: 13px; line-height: 1.5; margin: 0 0 18px; padding: 10px 14px; border-left: 3px solid var(--terra); background: rgba(0,0,0,.035); }
