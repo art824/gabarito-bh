@@ -1302,6 +1302,11 @@ def reportar_geral():
     return jsonify({"ok": True})
 
 
+@app.route("/sobre", methods=["GET"])
+def sobre():
+    return render_template("sobre.html")
+
+
 @app.route("/privacidade", methods=["GET"])
 def privacidade():
     return render_template("privacidade.html")
@@ -1343,9 +1348,39 @@ def sitemap_xml():
     return Response(
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-        "<url><loc>https://gabaritoarq.com.br/</loc></url></urlset>\n",
+        "<url><loc>https://gabaritoarq.com.br/</loc></url>"
+        "<url><loc>https://gabaritoarq.com.br/sobre</loc></url>"
+        "<url><loc>https://gabaritoarq.com.br/privacidade</loc></url></urlset>\n",
         mimetype="application/xml",
     )
+
+
+_LLMS_TXT = """# Gabarito
+
+> Ferramenta gratuita que mostra, numa tela só, os parâmetros urbanísticos de qualquer lote de Belo Horizonte (MG): zoneamento, ADEs, coeficientes de aproveitamento, quota, afastamentos, taxas de ocupação e permeabilidade, proteção cultural e altura máxima liberada pelo CINDACTA. Inclui mapa do lote, estudo de altura e exportação em DXF. Sem cadastro.
+
+Feito por Arthur Cunha Ferreira, graduando em Arquitetura e Urbanismo pela UFMG.
+
+## Cobertura e limites
+- Base legal: Lei 11.181/19 (Plano Diretor de BH) e anexos; geodados da Prefeitura (BHMAP).
+- A cópia dos cadastros é atualizada manualmente; a altura do CINDACTA é consultada ao vivo.
+- É apoio ao estudo preliminar: não substitui consulta oficial nem responsável técnico. Cada ficha lista o que não verifica.
+
+## Páginas
+- [Página inicial](https://gabaritoarq.com.br/): o que é e perguntas frequentes
+- [Sobre](https://gabaritoarq.com.br/sobre): autoria, fontes e limites
+- [Consultar lote](https://gabaritoarq.com.br/consulta): busca por endereço ou índice cadastral
+- [Privacidade](https://gabaritoarq.com.br/privacidade)
+
+## Link de uma ficha
+A ficha abre por link com o índice cadastral: https://gabaritoarq.com.br/consulta?indice=<índice cadastral>
+"""
+
+
+@app.route("/llms.txt")
+def llms_txt():
+    """Resumo do site para assistentes de IA (formato llms.txt)."""
+    return Response(_LLMS_TXT, mimetype="text/plain; charset=utf-8")
 
 
 @app.route("/favicon.ico")

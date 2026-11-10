@@ -1736,3 +1736,8 @@ summary.grupo-k:focus-visible { outline: 2px solid var(--terra); outline-offset:
 .bloco-recolhivel[open] > summary { margin-bottom: 12px; }
 .bloco-recolhivel .bloco-qtd { font-weight: 400; color: var(--grafite); }
 .bloco-recolhivel > summary:focus-visible { outline: 2px solid var(--terra); outline-offset: 3px; }
+
+/* Perguntas frequentes da página inicial */
+.faq { max-width: 760px; }
+.faq h3 { font-size: 19px; margin: 28px 0 8px; }
+.faq p { margin: 0; line-height: 1.6; }

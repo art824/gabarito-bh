@@ -28,14 +28,18 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Gabarito">
 <meta property="og:locale" content="pt_BR">
-<meta property="og:title" content="Gabarito: parâmetros urbanísticos de qualquer lote de BH">
-<meta property="og:description" content="Zoneamento, coeficientes, afastamentos, altura do CINDACTA e estudo volumétrico do lote. Grátis e sem cadastro.">
+<meta property="og:title" content="{% block og_titulo %}Gabarito: parâmetros urbanísticos de qualquer lote de BH{% endblock %}">
+<meta property="og:description" content="{% block og_descricao %}Zoneamento, coeficientes, afastamentos, altura do CINDACTA e estudo volumétrico do lote. Grátis e sem cadastro.{% endblock %}">
 <meta property="og:url" content="https://gabaritoarq.com.br{{ request.path }}">
 <meta property="og:image" content="https://gabaritoarq.com.br/static/og-gabarito.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Gabarito","alternateName":"Gabarito BH","url":"https://gabaritoarq.com.br/","inLanguage":"pt-BR","description":"Parâmetros urbanísticos de qualquer lote de Belo Horizonte."}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[
+{"@type":"WebSite","@id":"https://gabaritoarq.com.br/#site","name":"Gabarito","alternateName":"Gabarito BH","url":"https://gabaritoarq.com.br/","inLanguage":"pt-BR","description":"Parâmetros urbanísticos de qualquer lote de Belo Horizonte.","publisher":{"@id":"https://gabaritoarq.com.br/sobre#arthur"}},
+{"@type":"WebApplication","@id":"https://gabaritoarq.com.br/#app","name":"Gabarito","url":"https://gabaritoarq.com.br/consulta","applicationCategory":"UtilitiesApplication","operatingSystem":"Web","inLanguage":"pt-BR","isAccessibleForFree":true,"description":"Ficha urbanística de qualquer lote de Belo Horizonte: zoneamento, ADEs, coeficientes de aproveitamento, afastamentos, permeabilidade, altura liberada pelo CINDACTA e estudo de altura exportável em DXF.","offers":{"@type":"Offer","price":"0","priceCurrency":"BRL"},"areaServed":{"@type":"City","name":"Belo Horizonte","containedInPlace":{"@type":"AdministrativeArea","name":"Minas Gerais"}},"author":{"@id":"https://gabaritoarq.com.br/sobre#arthur"}},
+{"@type":"Person","@id":"https://gabaritoarq.com.br/sobre#arthur","name":"Arthur Cunha Ferreira","url":"https://gabaritoarq.com.br/sobre","jobTitle":"Graduando em Arquitetura e Urbanismo","affiliation":{"@type":"CollegeOrUniversity","name":"Universidade Federal de Minas Gerais (UFMG)"}}
+]}</script>
 <link rel="stylesheet" href="{{ asset('style.css') }}">
 <script src="{{ asset('script.js') }}" defer></script>
 </head>
@@ -46,6 +50,7 @@
     <a class="wordmark" href="/">Gabarito<span class="bh">BH</span></a>
     <div class="links">
       <a href="/#a-ficha">A ficha</a>
+      <a href="/sobre">Sobre</a>
       <a href="/consulta" class="destaque">Consultar lote</a>
     </div>
   </div>
@@ -73,7 +78,7 @@
         Contato: <span class="email-destaque">arthurcunhaf@gmail.com</span>
       </p>
     </div>
-    <p class="legal">Gabarito · Lei 11.181/19 · Belo Horizonte, MG · <a href="/privacidade">Privacidade</a></p>
+    <p class="legal">Gabarito · Lei 11.181/19 · Belo Horizonte, MG · <a href="/sobre">Sobre</a> · <a href="/privacidade">Privacidade</a></p>
   </div>
 </footer>
 

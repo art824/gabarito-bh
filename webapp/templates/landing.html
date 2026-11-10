@@ -54,6 +54,16 @@
       </div>
       <div class="fc-itens" id="fc-itens" role="tablist" aria-label="Itens da ficha"></div>
     </div>
+    <ol class="so-leitor" aria-label="Itens da ficha">
+      <li><h3>Zoneamento</h3><p>Em qual zona da cidade o lote está. É ela que define o quanto e o quê a lei permite construir ali.</p></li>
+      <li><h3>ADEs incidentes</h3><p>Áreas com regras especiais (Pampulha, Santa Tereza, Av. do Contorno e outras) que mudam as regras gerais, inclusive quando várias se sobrepõem no mesmo lote.</p></li>
+      <li><h3>Potencial construtivo</h3><p>Quantos metros quadrados dá para construir em relação ao tamanho do terreno (coeficiente de aproveitamento) e quantas unidades cabem (quota).</p></li>
+      <li><h3>Afastamentos</h3><p>As distâncias mínimas que a construção precisa manter da rua e dos vizinhos, que mudam conforme a altura do prédio.</p></li>
+      <li><h3>Permeabilidade e ocupação</h3><p>Quanto do terreno precisa ficar livre para a água da chuva infiltrar, e quanto do chão pode ser coberto por construção.</p></li>
+      <li><h3>Dados oficiais do lote</h3><p>Área, testada, índice cadastral e infraestrutura da rua, direto do cadastro oficial da Prefeitura.</p></li>
+      <li><h3>Estudo interativo</h3><p>Um desenho do lote em escala: ao mudar a altura pretendida, os afastamentos e a área construível mudam na hora, e o estudo pode ser baixado em DXF.</p></li>
+      <li><h3>Transparência total</h3><p>Toda exceção que prevalece aparece escrita, e tudo que o sistema ainda não verifica vira alerta explícito.</p></li>
+    </ol>
     <script type="application/json" id="dados-fc">[
       {"t": "Zoneamento", "d": "Em qual \"zona\" da cidade o lote está — é ela que define o quanto e o quê a lei permite construir ali."},
       {"t": "ADEs incidentes", "d": "Áreas com regras especiais (Pampulha, Santa Tereza, Av. do Contorno...) que mudam as regras gerais — inclusive quando várias se sobrepõem no mesmo lote."},
@@ -162,6 +172,25 @@
     </div>
     <div class="cta-meio">
       <a class="botao botao-claro" href="/consulta">Ver o potencial do seu lote de verdade →</a>
+    </div>
+  </div>
+</section>
+
+<section class="faixa" id="perguntas">
+  <div class="container reveal">
+    <p class="rotulo-secao">Perguntas frequentes</p>
+    <h2 class="titulo-secao">Perguntas que quem projeta em BH sempre faz.</h2>
+    <div class="faq">
+      <h3>Como saber o zoneamento e os parâmetros de um lote em Belo Horizonte?</h3>
+      <p>Pelo Plano Diretor (Lei 11.181/19) e pelas camadas de geodados da Prefeitura (BHMAP), cruzando o lote com o zoneamento, as ADEs e as demais restrições que incidem sobre ele. O Gabarito faz esse cruzamento: você digita o endereço ou o índice cadastral e recebe, numa tela só, o zoneamento, os coeficientes de aproveitamento, os afastamentos, as taxas de ocupação e permeabilidade e a altura liberada pelo CINDACTA.</p>
+      <h3>O que é coeficiente de aproveitamento básico e máximo?</h3>
+      <p>O coeficiente de aproveitamento (CA) multiplica a área do terreno para dar a área construída permitida. O CA básico é o que se constrói sem contrapartida. Acima dele, até o CA máximo da zona, é preciso pagar a outorga onerosa do direito de construir. Num lote de 600 m² em zona de CA básico 1,0 e máximo 5,0, o potencial vai de 600 m² a 3.000 m².</p>
+      <h3>O que é uma ADE em Belo Horizonte?</h3>
+      <p>ADE é Área de Diretrizes Especiais: um recorte da cidade com regras próprias (como Pampulha, Santa Tereza ou Av. do Contorno) que se sobrepõe ao zoneamento e pode mudar afastamentos, alturas e coeficientes. Um mesmo lote pode estar em mais de uma ADE, e a ficha mostra todas as que incidem sobre ele.</p>
+      <h3>O que é o índice cadastral do lote e onde encontro?</h3>
+      <p>É o código que identifica o lote no cadastro imobiliário da Prefeitura, e costuma aparecer em documentos como o IPTU. Na ferramenta, você pode buscar por ele ou simplesmente pelo endereço.</p>
+      <h3>Os dados do Gabarito são oficiais? Posso usar no projeto?</h3>
+      <p>Os dados vêm de bases públicas da Prefeitura e do texto da lei, e cada número indica a fonte. Mas o Gabarito não é um serviço oficial: é uma ferramenta de apoio ao estudo preliminar. A própria ficha lista o que ela não verifica, e a consulta oficial e o responsável técnico continuam necessários. Texto revisado em novembro de 2026.</p>
     </div>
   </div>
 </section>
